@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "54955106735",
+    "project_id": "dementia-app-2025",
+    "storage_bucket": "dementia-app-2025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:54955106735:android:ed95e1b17fba45b566cf5a",
+        "android_client_info": {
+          "package_name": "com.example.dementia_virtual_memory"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD24yA69_RtcP-ad4cVST3ykwfEEpWScGw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
