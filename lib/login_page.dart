@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'admin/admin_bottom_nav.dart';
-import 'careTaker/caretaker_bottom_nav.dart';
+import 'careTaker/care_taker.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
 import 'user/user_bottom_nav.dart';
@@ -32,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
       } else if (widget.role == 'caretaker') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const CaretakerBottomNav()),
+          MaterialPageRoute(builder: (context) => const CareTaker()),
         );
       } else {
         Navigator.pushReplacement(
