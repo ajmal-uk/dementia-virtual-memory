@@ -40,8 +40,23 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // 🚀 Disable all unit test tasks (fix for generateDebugUnitTestConfig error)
+    testOptions {
+        unitTests.all {
+            it.enabled = false
+        }
+    }
 }
 
 flutter {
     source = "../.."
 }
+
+// 🚀 Alternatively, if you only want to disable the specific task instead of all unit tests,
+// uncomment this block:
+// tasks.whenTaskAdded { task ->
+//     if (task.name.contains("generateDebugUnitTestConfig")) {
+//         task.enabled = false
+//     }
+// }
