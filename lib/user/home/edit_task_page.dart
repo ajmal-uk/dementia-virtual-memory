@@ -1,14 +1,11 @@
+// lib/user/home/edit_task_page.dart
 import 'package:flutter/material.dart';
 
 class EditTaskPage extends StatefulWidget {
   final String taskName;
   final String description;
 
-  const EditTaskPage({
-    super.key,
-    required this.taskName,
-    required this.description,
-  });
+  const EditTaskPage({super.key, required this.taskName, required this.description});
 
   @override
   State<EditTaskPage> createState() => _EditTaskPageState();
@@ -33,34 +30,24 @@ class _EditTaskPageState extends State<EditTaskPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(
-              controller: _taskController,
-              decoration: const InputDecoration(
-                labelText: 'Task name',
-                border: OutlineInputBorder(),
-              ),
-            ),
+            TextField(controller: _taskController, decoration: const InputDecoration(labelText: 'Task name', border: OutlineInputBorder())),
             const SizedBox(height: 16),
-            TextField(
-              controller: _descController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                border: OutlineInputBorder(),
-              ),
-            ),
+            TextField(controller: _descController, decoration: const InputDecoration(labelText: 'Description (optional)', border: OutlineInputBorder())),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, {
-                  'task': _taskController.text.trim(),
-                  'description': _descController.text.trim(),
-                });
-              },
+              onPressed: () => Navigator.pop(context, {'task': _taskController.text.trim(), 'description': _descController.text.trim()}),
               child: const Text('Save Changes'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _taskController.dispose();
+    _descController.dispose();
+    super.dispose();
   }
 }

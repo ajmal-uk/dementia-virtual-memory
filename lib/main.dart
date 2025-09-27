@@ -1,12 +1,44 @@
+// lib/main.dart
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'firebase_options.dart';
 import 'welcome_page.dart';
+import 'user/user_bottom_nav.dart';
+import 'careTaker/care_taker.dart';
+import 'admin/admin_bottom_nav.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  OneSignal.initialize("73673a14-2de9-44c4-a9c5-dd531da39b59");
+  OneSignal.Notifications.requestPermission(true);
+
+  // Check for auto-login
+  final prefs = await SharedPreferences.getInstance();
+  final user = FirebaseAuth.instance.currentUser;
+  Widget initialScreen = const WelcomePage();
+
+  if (user != null) {
+    final role = prefs.getString('lastRole') ?? 'user';
+    if (role == 'user') {
+      initialScreen = const UserBottomNav();
+    } else if (role == 'caretaker') {
+      initialScreen = const CareTaker();
+    } else if (role == 'admin') {
+      initialScreen = const AdminBottomNav();
+    }
+  }
+
+  runApp(MyApp(initialScreen: initialScreen));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Widget initialScreen;
+
+  const MyApp({super.key, required this.initialScreen});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +48,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const WelcomePage(),
+      home: initialScreen,
     );
   }
 }

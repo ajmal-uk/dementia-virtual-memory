@@ -1,4 +1,9 @@
+// lib/login_page.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'admin/admin_bottom_nav.dart';
 import 'careTaker/care_taker.dart';
 import 'register_page.dart';
@@ -16,31 +21,55 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+  bool _loading = false;
 
-  void _login() {
-    // TODO: Implement Firebase login here
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logged in as ${widget.role}')),
-    );
+  Future<void> _login() async {
+    setState(() => _loading = true);
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+      final uid = credential.user?.uid;
+      if (uid != null) {
+        final doc = await _firestore.collection(widget.role).doc(uid).get();
+        if (doc.exists) {
+          final data = doc.data()!;
+          if (data['isBanned'] == true) {
+            await _auth.signOut();
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account is banned')));
+            return;
+          }
+          // Add player ID
+          final playerId = OneSignal.User.pushSubscription.id;
+          if (playerId != null) {
+            await _firestore.collection(widget.role).doc(uid).update({
+              'playerIds': FieldValue.arrayUnion([playerId]),
+            });
+          }
+          // Save the role for auto-login
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('lastRole', widget.role);
 
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (widget.role == 'user') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const UserBottomNav()),
-        );
-      } else if (widget.role == 'caretaker') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const CareTaker()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminBottomNav()),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Logged in as ${widget.role}')));
+          if (widget.role == 'user') {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const UserBottomNav()));
+          } else if (widget.role == 'caretaker') {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CareTaker()));
+          } else {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminBottomNav()));
+          }
+        } else {
+          throw 'Role mismatch or user not found';
+        }
       }
-    });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   void _goToRegister() {
@@ -62,7 +91,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final isAdmin = widget.role == 'admin';
-
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.role.toUpperCase()} Login'),
@@ -90,15 +118,17 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _login,
-              child: Text('Login as ${widget.role}'),
-            ),
+            _loading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: _login,
+                    child: Text('Login as ${widget.role}'),
+                  ),
             const SizedBox(height: 16),
             if (!isAdmin)
               TextButton(
                 onPressed: _goToRegister,
-                child: const Text('Don\'t have an account? Sign up here'),
+                child: const Text("Don't have an account? Sign up here"),
               ),
           ],
         ),

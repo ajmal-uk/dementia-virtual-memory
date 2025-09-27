@@ -1,3 +1,4 @@
+// lib/user/home/add_task_page.dart
 import 'package:flutter/material.dart';
 
 class AddTaskPage extends StatefulWidget {
@@ -37,6 +38,12 @@ class _AddTaskPageState extends State<AddTaskPage> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
+                if (_taskController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Task name cannot be empty')),
+                  );
+                  return;
+                }
                 Navigator.pop(context, {
                   'task': _taskController.text.trim(),
                   'description': _descController.text.trim(),
@@ -48,5 +55,12 @@ class _AddTaskPageState extends State<AddTaskPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _taskController.dispose();
+    _descController.dispose();
+    super.dispose();
   }
 }

@@ -1,9 +1,12 @@
+// lib/user/user_bottom_nav.dart
 import 'package:flutter/material.dart';
-import 'family/family.dart';
+import 'family/family_screen.dart';
 import 'home/home_screen.dart';
+import 'caretaker/caretaker_screen.dart';
+import 'profile/user_profile.dart';
 
 class UserBottomNav extends StatefulWidget {
-  const UserBottomNav({Key? key}) : super(key: key);
+  const UserBottomNav({super.key});
 
   @override
   State<UserBottomNav> createState() => _UserBottomNavState();
@@ -15,8 +18,8 @@ class _UserBottomNavState extends State<UserBottomNav> {
   final List<Widget> _pages = [
     const HomeScreen(),
     const FamilyScreen(),
-    const Center(child: Text('CareTaker Screen')),
-    const Center(child: Text('User Profile')),
+    const CaretakerScreen(),
+    const UserProfile(),
   ];
 
   @override
@@ -26,16 +29,15 @@ class _UserBottomNavState extends State<UserBottomNav> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed, // allows more than 3 items
+        type: BottomNavigationBarType.fixed,
         items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Family'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.group), label: 'Family'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.manage_accounts), label: 'CareTaker'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person), label: 'Profile'),
+            icon: Icon(Icons.manage_accounts),
+            label: 'CareTaker',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

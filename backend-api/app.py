@@ -1,3 +1,4 @@
+# Updated API code
 import os
 import tempfile
 import base64
@@ -15,12 +16,33 @@ class SimpleFacerec:
         self.known_face_data = []
         self.model_name = model_name
 
-    def _save_base64_image(self, base64_str):
-        img_data = base64.b64decode(base64_str)
-        tmp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-        tmp_file.write(img_data)
-        tmp_file.close()
-        return tmp_file.name
+    def _get_temp_image_path(self, image_data):
+        if image_data.startswith('http'):  # URL
+            try:
+                resp = requests.get(image_data, stream=True, timeout=10)
+                resp.raise_for_status()
+                tmp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+                for chunk in resp.iter_content(chunk_size=8192):
+                    tmp_file.write(chunk)
+                tmp_file.close()
+                return tmp_file.name
+            except Exception as e:
+                print(f"[ERROR] Could not download image from URL: {e}")
+                return None
+        elif image_data.startswith('data:image/'):  # data URI
+            # Extract base64
+            base64_str = image_data.split(',')[1]
+            img_data = base64.b64decode(base64_str)
+            tmp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+            tmp_file.write(img_data)
+            tmp_file.close()
+            return tmp_file.name
+        else:  # Assume plain base64
+            img_data = base64.b64decode(image_data)
+            tmp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+            tmp_file.write(img_data)
+            tmp_file.close()
+            return tmp_file.name
 
     def _safe_path(self, img_path):
         if img_path.lower().endswith(".webp"):
@@ -31,7 +53,9 @@ class SimpleFacerec:
 
     def add_member(self, member):
         try:
-            img_path = self._save_base64_image(member['memberImage'])
+            img_path = self._get_temp_image_path(member['memberImage'])
+            if img_path is None:
+                return False
             safe_img = self._safe_path(img_path)
 
             embedding = DeepFace.represent(
@@ -42,11 +66,11 @@ class SimpleFacerec:
 
             embedding = np.array(embedding)
             self.known_face_encodings.append(embedding)
-            # Store the original URL instead of base64 data
+            # Store the original URL if provided
             self.known_face_data.append({
                 "memberName": member.get("memberName"),
                 "memberRelation": member.get("memberRelation"),
-                "memberImageUrl": member.get("memberImageUrl")  # Store URL instead of base64
+                "memberImageUrl": member.get("memberImageUrl", member['memberImage'])  # Fallback to memberImage if no URL
             })
 
             if safe_img != img_path:
@@ -58,7 +82,11 @@ class SimpleFacerec:
             print(f"[WARNING] Could not encode member {member.get('memberName')}: {e}")
             return False
 
-    def match_image(self, query_img_path, tolerance=0.45):
+    def match_image(self, query_img_data, tolerance=0.45):
+        query_img_path = self._get_temp_image_path(query_img_data)
+        if query_img_path is None:
+            return None, None
+
         try:
             safe_img = self._safe_path(query_img_path)
             embedding = DeepFace.represent(
@@ -70,6 +98,7 @@ class SimpleFacerec:
             query_encoding = np.array(embedding)
             if safe_img != query_img_path:
                 os.remove(safe_img)
+            os.remove(query_img_path)
 
         except Exception as e:
             print(f"[ERROR] Could not process query image: {e}")
@@ -122,10 +151,11 @@ def recognize():
 
     loaded_members = 0
     for member in members:
-        # Check for both memberImage (base64) and memberImageUrl (URL)
+        # Check for both memberImage (base64 or URL) and memberImageUrl (optional)
         if all(k in member for k in ("memberName", "memberImage", "memberRelation")):
-            # Add the original URL to the member data
-            member["memberImageUrl"] = member.get("memberImageUrl", "")
+            # Add the original URL to the member data if not present
+            if "memberImageUrl" not in member:
+                member["memberImageUrl"] = member["memberImage"] if member["memberImage"].startswith('http') else ""
             if sfr.add_member(member):
                 loaded_members += 1
         else:
@@ -134,27 +164,14 @@ def recognize():
     if loaded_members == 0:
         return jsonify({"error": "No valid member images loaded"}), 400
 
-    # Download test image from imageUrl
-    try:
-        resp = requests.get(image_url, stream=True, timeout=10)
-        resp.raise_for_status()
-        tmp_query_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-        for chunk in resp.iter_content(chunk_size=8192):
-            tmp_query_file.write(chunk)
-        tmp_query_file.close()
-    except Exception as e:
-        return jsonify({"error": f"Could not download imageUrl: {e}"}), 400
-
-    matched_member, confidence = sfr.match_image(tmp_query_file.name)
-
-    os.remove(tmp_query_file.name)
+    matched_member, confidence = sfr.match_image(image_url)
 
     if matched_member:
         return jsonify({
             "matchFound": True,
             "memberName": matched_member["memberName"],
             "memberRelation": matched_member["memberRelation"],
-            "memberImageUrl": matched_member["memberImageUrl"],  # Return URL instead of base64
+            "memberImageUrl": matched_member["memberImageUrl"],  # Return URL
             "confidence": float(confidence)
         })
     else:
