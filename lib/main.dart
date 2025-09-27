@@ -1,7 +1,8 @@
-// lib/main.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
@@ -16,10 +17,12 @@ void main() async {
   OneSignal.initialize("73673a14-2de9-44c4-a9c5-dd531da39b59");
   OneSignal.Notifications.requestPermission(true);
 
-  // Check for auto-login
   final prefs = await SharedPreferences.getInstance();
   final user = FirebaseAuth.instance.currentUser;
   Widget initialScreen = const WelcomePage();
+  
+  await dotenv.load();
+  Gemini.init(apiKey: dotenv.env['GEMINI_API_KEY']!);
 
   if (user != null) {
     final role = prefs.getString('lastRole') ?? 'user';

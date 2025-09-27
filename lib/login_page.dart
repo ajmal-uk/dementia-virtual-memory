@@ -39,7 +39,9 @@ class _LoginPageState extends State<LoginPage> {
           final data = doc.data()!;
           if (data['isBanned'] == true) {
             await _auth.signOut();
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account is banned')));
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account is banned')));
+            }
             return;
           }
           // Add player ID
@@ -53,7 +55,9 @@ class _LoginPageState extends State<LoginPage> {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('lastRole', widget.role);
 
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Logged in as ${widget.role}')));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Logged in as ${widget.role}')));
+          }
           if (widget.role == 'user') {
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const UserBottomNav()));
           } else if (widget.role == 'caretaker') {
@@ -66,7 +70,9 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+      }
     } finally {
       setState(() => _loading = false);
     }
@@ -92,45 +98,77 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final isAdmin = widget.role == 'admin';
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.role.toUpperCase()} Login'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _forgotPassword,
-                child: const Text('Forgot Password?'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _loading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _login,
-                    child: Text('Login as ${widget.role}'),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.blueAccent.withValues(alpha: 0.1), Colors.white],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${widget.role.toUpperCase()} Login',
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                ),
+                const SizedBox(height: 32),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    prefixIcon: const Icon(Icons.email, color: Colors.blueAccent),
                   ),
-            const SizedBox(height: 16),
-            if (!isAdmin)
-              TextButton(
-                onPressed: _goToRegister,
-                child: const Text("Don't have an account? Sign up here"),
-              ),
-          ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    prefixIcon: const Icon(Icons.lock, color: Colors.blueAccent),
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _forgotPassword,
+                    child: const Text('Forgot Password?', style: TextStyle(color: Colors.blueAccent)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _loading
+                    ? const CircularProgressIndicator(color: Colors.blueAccent)
+                    : ElevatedButton(
+                        onPressed: _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        child: Text('Login as ${widget.role}', style: const TextStyle(fontSize: 18, color: Colors.white)),
+                      ),
+                const SizedBox(height: 16),
+                if (!isAdmin)
+                  TextButton(
+                    onPressed: _goToRegister,
+                    child: const Text("Don't have an account? Sign up here", style: TextStyle(color: Colors.blueAccent)),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -1,17 +1,20 @@
-// lib/user/home/home_screen.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import '../notifications/notifications_screen.dart';
+import '../../utils/notification_helper.dart';
 import 'add_task_page.dart';
 import 'edit_task_page.dart';
-import '../notifications/notifications_screen.dart';
 
 final logger = Logger();
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -19,95 +22,177 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
-  String _selectedTab = 'All';
+  String _selectedTab = 'Today';
 
   @override
   void initState() {
     super.initState();
     _checkBanned();
+    _generateDailyTasks();
   }
 
   Future<void> _checkBanned() async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null || !mounted) return;
     try {
       final doc = await _firestore.collection('user').doc(uid).get();
       if (doc.data()?['isBanned'] == true) {
         await _auth.signOut();
-        if (mounted) Navigator.pushReplacementNamed(context, '/welcome');
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/welcome');
+        }
       }
     } catch (e) {
-      // If permission denied here, user must update Firestore security rules.
       logger.e('Error checking banned status: $e');
     }
   }
 
-  /// Note: to avoid requiring a composite Firestore index (completed ASC + createdAt DESC),
-  /// we subscribe to documents ordered by createdAt (single-field index, auto-built)
-  /// and apply the completed filter client-side.
+  Future<void> _generateDailyTasks() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null || !mounted) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final lastGenerate = prefs.getString('last_generate_date');
+    if (lastGenerate == todayStr) return;
+
+    try {
+      final recurringSnap = await _firestore
+          .collection('user')
+          .doc(uid)
+          .collection('recurring_tasks')
+          .get();
+      for (var rec in recurringSnap.docs) {
+        final data = rec.data();
+        final dailyDue = data['dailyDueTime'];
+        if (dailyDue == null) continue;
+
+        final today = DateTime.now();
+        final dueDate = DateTime(
+            today.year, today.month, today.day, dailyDue['hour'], dailyDue['min']);
+        final dueTs = Timestamp.fromDate(dueDate);
+
+        final reminder = data['dailyReminderTime'];
+        Timestamp? reminderTs;
+        if (reminder != null) {
+          final remDate = DateTime(today.year, today.month, today.day,
+              reminder['hour'], reminder['min']);
+          reminderTs = Timestamp.fromDate(remDate);
+        }
+
+        final existing = await _firestore
+            .collection('user')
+            .doc(uid)
+            .collection('to_dos')
+            .where('recurringId', isEqualTo: rec.id)
+            .where('dueDate', isEqualTo: dueTs)
+            .get();
+
+        if (existing.docs.isEmpty) {
+          await _firestore.collection('user').doc(uid).collection('to_dos').add({
+            'task': data['task'],
+            'description': data['description'],
+            'completed': false,
+            'createdAt': Timestamp.now(),
+            'dueDate': dueTs,
+            'reminderTime': reminderTs,
+            'recurringId': rec.id,
+            'createdBy': 'system',
+          });
+
+          if (reminderTs != null && reminderTs.toDate().isAfter(DateTime.now())) {
+            final userPlayerIds = await _getUserPlayerIds();
+            final caretakerPlayerIds = await _getCaretakerPlayerIds();
+            final all = [...userPlayerIds, ...caretakerPlayerIds];
+            await scheduleNotification(
+                all, 'Daily Task Reminder: ${data['task']}', reminderTs.toDate());
+          }
+        }
+      }
+      await prefs.setString('last_generate_date', todayStr);
+    } catch (e) {
+      logger.e('Error generating daily tasks: $e');
+    }
+  }
+
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _getTasksStream() {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return Stream.value([]);
 
+    if (_selectedTab == 'Recurring') {
+      return _firestore
+          .collection('user')
+          .doc(uid)
+          .collection('recurring_tasks')
+          .orderBy('createdAt', descending: true)
+          .limit(50) // Limit to improve performance
+          .snapshots()
+          .map((snap) => snap.docs);
+    }
+
     final coll = _firestore.collection('user').doc(uid).collection('to_dos');
+    final todayStart = Timestamp.fromDate(
+        DateTime.now().subtract(const Duration(days: 1)).add(const Duration(hours: 24)));
+    final todayEnd = Timestamp.fromDate(DateTime.now().add(const Duration(days: 1)));
 
-    // Order by createdAt (single-field ordering — does not require a composite index).
-    final baseStream = coll.orderBy('createdAt', descending: true).snapshots();
+    Stream<QuerySnapshot<Map<String, dynamic>>> baseStream;
 
-    // Map to documents and apply client-side filter based on _selectedTab.
-    return baseStream.map((snap) {
-      final allDocs = snap.docs;
-      if (_selectedTab == 'Completed') {
-        return allDocs
-            .where((d) => (d.data()['completed'] as bool? ?? false))
-            .toList();
-      } else if (_selectedTab == 'InCompleted') {
-        return allDocs
-            .where((d) => !(d.data()['completed'] as bool? ?? false))
-            .toList();
-      } else {
-        return allDocs;
-      }
-    });
+    if (_selectedTab == 'Today') {
+      baseStream = coll
+          .where('dueDate', isGreaterThanOrEqualTo: todayStart)
+          .where('dueDate', isLessThan: todayEnd)
+          .orderBy('dueDate', descending: false)
+          .limit(50)
+          .snapshots();
+    } else if (_selectedTab == 'Upcoming') {
+      baseStream = coll
+          .where('dueDate', isGreaterThanOrEqualTo: todayEnd)
+          .orderBy('dueDate', descending: false)
+          .limit(50)
+          .snapshots();
+    } else if (_selectedTab == 'Completed') {
+      baseStream = coll
+          .where('completed', isEqualTo: true)
+          .orderBy('dueDate', descending: true)
+          .limit(50)
+          .snapshots();
+    } else {
+      baseStream = coll.orderBy('dueDate', descending: true).limit(50).snapshots();
+    }
+
+    return baseStream.map((snap) => snap.docs);
   }
 
-  /// Get remaining tasks. If Firestore returns an index error for the `where` query,
-  /// fallback to fetching all and counting client-side.
-  Future<int> _getRemaining() async {
+  Future<int> _getRemainingToday() async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return 0;
 
     final coll = _firestore.collection('user').doc(uid).collection('to_dos');
+    final todayStart = Timestamp.fromDate(
+        DateTime.now().subtract(const Duration(days: 1)).add(const Duration(hours: 24)));
+    final todayEnd = Timestamp.fromDate(DateTime.now().add(const Duration(days: 1)));
 
     try {
-      // Preferred: server-side count by where().
-      final snap = await coll.where('completed', isEqualTo: false).get();
+      final snap = await coll
+          .where('completed', isEqualTo: false)
+          .where('dueDate', isGreaterThanOrEqualTo: todayStart)
+          .where('dueDate', isLessThan: todayEnd)
+          .get();
       return snap.docs.length;
     } catch (e) {
-      final err = e.toString();
-      logger.w('Error getting remaining tasks (trying fallback): $err');
-      // If it's index-related or any other issue, fallback to downloading all docs and counting.
-      try {
-        final all = await coll.get();
-        final count = all.docs
-            .where((d) => !(d.data()['completed'] as bool? ?? false))
-            .length;
-        return count;
-      } catch (e2) {
-        logger.e('Fallback failed getting remaining tasks: $e2');
-        return 0;
-      }
+      logger.e('Error getting remaining today: $e');
+      return 0;
     }
   }
 
-  Future<void> _deleteTask(String id) async {
+  Future<void> _deleteTask(String id, bool isTemplate) async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null || !mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete Task'),
-        content: const Text('Are you sure?'),
+        content: const Text('Are you sure you want to delete this task?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -121,19 +206,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-    if (confirm == true) {
+    if (confirm == true && mounted) {
       try {
+        final coll = isTemplate ? 'recurring_tasks' : 'to_dos';
         await _firestore
             .collection('user')
             .doc(uid)
-            .collection('to_dos')
+            .collection(coll)
             .doc(id)
             .delete();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error deleting task: $e')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Error deleting: $e')));
         }
       }
     }
@@ -141,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _toggleTaskStatus(String id, bool current) async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null || !mounted) return;
     try {
       await _firestore
           .collection('user')
@@ -151,11 +236,35 @@ class _HomeScreenState extends State<HomeScreen> {
           .update({'completed': !current});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error updating task: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error updating task: $e')));
       }
     }
+  }
+
+  Future<List<String>> _getCaretakerPlayerIds() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return [];
+
+    final userDoc = await _firestore.collection('user').doc(uid).get();
+    final connectionId = userDoc.data()?['currentConnectionId'];
+    if (connectionId == null) return [];
+
+    final connectionDoc =
+        await _firestore.collection('connections').doc(connectionId).get();
+    final caretakerUid = connectionDoc.data()?['caretaker_uid'];
+    if (caretakerUid == null) return [];
+
+    final caretakerDoc =
+        await _firestore.collection('caretaker').doc(caretakerUid).get();
+    return List<String>.from(caretakerDoc.data()?['playerIds'] ?? []);
+  }
+
+  Future<List<String>> _getUserPlayerIds() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return [];
+    final userDoc = await _firestore.collection('user').doc(uid).get();
+    return List<String>.from(userDoc.data()?['playerIds'] ?? []);
   }
 
   @override
@@ -163,75 +272,109 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // top bar
           Container(
-            color: Colors.blue,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blueAccent, Colors.blue],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            ),
             padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top,
-              bottom: 8,
+              top: MediaQuery.of(context).padding.top + 16,
+              bottom: 16,
+              left: 16,
+              right: 16,
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications, color: Colors.yellow),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen(),
-                    ),
+                const Text(
+                  'Dementia Tasks',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.notifications, color: Colors.white),
+                  onPressed: () {
+                    if (mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen(),
+                        ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
           ),
-
-          // remaining count
           FutureBuilder<int>(
-            future: _getRemaining(),
+            future: _getRemainingToday(),
             builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const SizedBox();
-              }
-              if (snap.hasError) {
-                // If permission denied, real fix is to update Firestore rules.
-                final err = snap.error.toString();
-                logger.e('Remaining-count error: $err');
-                return _errorBanner('Error loading remaining count');
-              }
-              final int remaining = snap.data ?? 0;
-              return Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${remaining.toString().padLeft(3, '0')} Remaining',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Colors.greenAccent, Colors.green],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        snap.connectionState == ConnectionState.waiting
+                            ? '0'
+                            : (snap.data ?? 0).toString().padLeft(3, '0'),
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Remaining Today',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
             },
           ),
-
-          // filter buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _filterButton('All'),
-              _filterButton('InCompleted'),
-              _filterButton('Completed'),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                _filterChip('Today'),
+                const SizedBox(width: 8),
+                _filterChip('Upcoming'),
+                const SizedBox(width: 8),
+                _filterChip('Completed'),
+                const SizedBox(width: 8),
+                _filterChip('All'),
+                const SizedBox(width: 8),
+                _filterChip('Recurring'),
+              ],
+            ),
           ),
-
-          // task list (uses client-side filtering to avoid composite index requirement)
           Expanded(
             child: StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
               stream: _getTasksStream(),
@@ -241,16 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  // If permission denied: user must update Firestore rules.
-                  final err = snapshot.error.toString();
-                  logger.e('Task stream error: $err');
-                  final permissionDenied =
-                      err.contains('permission-denied') ||
-                      err.contains('PERMISSION_DENIED');
-                  final needsIndex =
-                      err.contains('requires an index') ||
-                      err.contains('FAILED_PRECONDITION');
-
+                  logger.e('Task stream error: ${snapshot.error}');
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -259,20 +393,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           const Icon(Icons.error, size: 64, color: Colors.red),
                           const SizedBox(height: 16),
-                          Text(
-                            permissionDenied
-                                ? 'Permission error: check Firestore rules for user read access.'
-                                : needsIndex
-                                ? 'Firestore index is missing.\nCreate composite index: completed ASC + createdAt DESC.'
-                                : 'Failed to load tasks.',
+                          const Text(
+                            'Failed to load tasks.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 16),
+                            style: TextStyle(fontSize: 16),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry'),
-                            onPressed: () => setState(() {}),
+                            onPressed: () {
+                              if (mounted) setState(() {});
+                            },
                           ),
                         ],
                       ),
@@ -281,140 +413,239 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 final docs = snapshot.data ?? [];
-                if (docs.isEmpty) return _emptyState();
+                if (docs.isEmpty) {
+                  return _emptyState();
+                }
 
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final doc = docs[index];
-                    final task = doc.data();
-                    final id = doc.id;
-                    final completed = task['completed'] as bool? ?? false;
-                    final description = task['description'] ?? '';
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    if (mounted) setState(() {});
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      final task = doc.data();
+                      final id = doc.id;
+                      final isTemplate = _selectedTab == 'Recurring';
+                      final completed = isTemplate ? false : (task['completed'] as bool? ?? false);
+                      final description = task['description'] as String? ?? '';
+                      final dueDate = task['dueDate'] as Timestamp?;
+                      final reminderTime = task['reminderTime'] as Timestamp?;
+                      final Map<String, dynamic>? dailyDueTime = isTemplate ? task['dailyDueTime'] as Map<String, dynamic>? : null;
+                      final Map<String, dynamic>? dailyReminderTime = isTemplate ? task['dailyReminderTime'] as Map<String, dynamic>? : null;
 
-                    return Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: completed ? Colors.white : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  task['task'] ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                      return Card(
+                        elevation: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        color: completed ? Colors.grey[200] : Colors.white,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          leading: isTemplate
+                              ? const Icon(Icons.repeat, color: Colors.blue, size: 32)
+                              : Icon(
+                                  completed
+                                      ? Icons.check_circle
+                                      : Icons.radio_button_unchecked,
+                                  color: completed ? Colors.green : Colors.red,
+                                  size: 32,
                                 ),
-                                if (description.isNotEmpty)
-                                  Text(
+                          title: Text(
+                            task['task'] as String? ?? 'Untitled',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              decoration:
+                                  completed ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (description.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
                                     description,
-                                    style: const TextStyle(
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              completed
-                                  ? Icons.check_circle
-                                  : Icons.radio_button_unchecked,
-                              color: completed ? Colors.green : Colors.red,
-                            ),
-                            onPressed: () => _toggleTaskStatus(id, completed),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () async {
-                              final updated = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => EditTaskPage(
-                                    taskName: task['task'] ?? '',
-                                    description: description,
+                                    style: const TextStyle(color: Colors.black54),
                                   ),
                                 ),
-                              );
-                              if (updated != null) {
-                                final uid = _auth.currentUser?.uid;
-                                if (uid != null) {
-                                  try {
-                                    await _firestore
-                                        .collection('user')
-                                        .doc(uid)
-                                        .collection('to_dos')
-                                        .doc(id)
-                                        .update({
-                                          'task': updated['task'],
-                                          'description': updated['description'],
-                                        });
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error updating: $e'),
-                                        ),
-                                      );
+                              if (!isTemplate && dueDate != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Due: ${DateFormat('MMM dd, yyyy hh:mm a').format(dueDate.toDate())}',
+                                    style: const TextStyle(color: Colors.blueGrey),
+                                  ),
+                                ),
+                              if (!isTemplate && reminderTime != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Reminder: ${DateFormat('MMM dd, yyyy hh:mm a').format(reminderTime.toDate())}',
+                                    style: const TextStyle(color: Colors.orange),
+                                  ),
+                                ),
+                              if (isTemplate && dailyDueTime != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Daily Due: ${dailyDueTime['hour'].toString().padLeft(2, '0')}:${dailyDueTime['min'].toString().padLeft(2, '0')}',
+                                    style: const TextStyle(color: Colors.blueGrey),
+                                  ),
+                                ),
+                              if (isTemplate && dailyReminderTime != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Daily Reminder: ${dailyReminderTime['hour'].toString().padLeft(2, '0')}:${dailyReminderTime['min'].toString().padLeft(2, '0')}',
+                                    style: const TextStyle(color: Colors.orange),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () async {
+                                  if (!mounted) return;
+                                  final Map<String, dynamic>? updated = await Navigator.push<Map<String, dynamic>>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => EditTaskPage(
+                                        taskName: task['task'] as String? ?? '',
+                                        description: description,
+                                        dueDate: dueDate?.toDate(),
+                                        reminderTime: reminderTime?.toDate(),
+                                        isTemplate: isTemplate,
+                                        dailyDueTime: dailyDueTime,
+                                        dailyReminderTime: dailyReminderTime,
+                                      ),
+                                    ),
+                                  );
+                                  if (updated != null && mounted) {
+                                    final uid = _auth.currentUser?.uid;
+                                    if (uid != null) {
+                                      try {
+                                        final coll = isTemplate ? 'recurring_tasks' : 'to_dos';
+                                        await _firestore
+                                            .collection('user')
+                                            .doc(uid)
+                                            .collection(coll)
+                                            .doc(id)
+                                            .update({
+                                              'task': updated['task'],
+                                              'description': updated['description'],
+                                              if (isTemplate)
+                                                'dailyDueTime': updated['dailyDueTime'],
+                                              if (isTemplate)
+                                                'dailyReminderTime': updated['dailyReminderTime'],
+                                              if (!isTemplate)
+                                                'dueDate': updated['dueDate'] != null
+                                                    ? Timestamp.fromDate(updated['dueDate'] as DateTime)
+                                                    : null,
+                                              if (!isTemplate)
+                                                'reminderTime': updated['reminderTime'] != null
+                                                    ? Timestamp.fromDate(updated['reminderTime'] as DateTime)
+                                                    : null,
+                                            });
+
+                                        if (!isTemplate && updated['reminderTime'] != null) {
+                                          final userPlayerIds = await _getUserPlayerIds();
+                                          final caretakerPlayerIds = await _getCaretakerPlayerIds();
+                                          final allPlayerIds = [...userPlayerIds, ...caretakerPlayerIds];
+
+                                          await scheduleNotification(
+                                            allPlayerIds,
+                                            'Task Reminder: ${updated['task']}',
+                                            updated['reminderTime'] as DateTime,
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Error updating: $e')),
+                                          );
+                                        }
+                                      }
                                     }
                                   }
-                                }
-                              }
-                            },
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteTask(id, isTemplate),
+                              ),
+                            ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteTask(id),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          onTap: isTemplate ? null : () => _toggleTaskStatus(id, completed),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.orange,
-        child: const Icon(Icons.add, color: Colors.black),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Add', style: TextStyle(color: Colors.white)),
         onPressed: () async {
+          if (!mounted) return;
           final newTask = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AddTaskPage()),
+            MaterialPageRoute(builder: (_) => AddTaskPage(isTemplate: _selectedTab == 'Recurring')),
           );
-          if (newTask != null) {
+          if (newTask != null && mounted) {
             final uid = _auth.currentUser?.uid;
             if (uid != null) {
               try {
-                await _firestore
-                    .collection('user')
-                    .doc(uid)
-                    .collection('to_dos')
-                    .add({
-                      'task': newTask['task'],
-                      'description': newTask['description'],
-                      'completed': false,
-                      'createdAt': Timestamp.now(),
-                      'createdBy': 'user',
-                    });
+                final isTemplate = newTask['recurring'] == 'Daily';
+                final coll = isTemplate ? 'recurring_tasks' : 'to_dos';
+                await _firestore.collection('user').doc(uid).collection(coll).add({
+                  'task': newTask['task'],
+                  'description': newTask['description'],
+                  if (!isTemplate) 'completed': false,
+                  'createdAt': Timestamp.now(),
+                  if (!isTemplate)
+                    'dueDate': newTask['dueDate'] != null
+                        ? Timestamp.fromDate(newTask['dueDate'] as DateTime)
+                        : null,
+                  if (!isTemplate)
+                    'reminderTime': newTask['reminderTime'] != null
+                        ? Timestamp.fromDate(newTask['reminderTime'] as DateTime)
+                        : null,
+                  if (isTemplate) 'dailyDueTime': newTask['dailyDueTime'],
+                  if (isTemplate) 'dailyReminderTime': newTask['dailyReminderTime'],
+                  'createdBy': 'user',
+                });
+
+                if (!isTemplate && newTask['reminderTime'] != null) {
+                  final userPlayerIds = await _getUserPlayerIds();
+                  final caretakerPlayerIds = await _getCaretakerPlayerIds();
+                  final allPlayerIds = [...userPlayerIds, ...caretakerPlayerIds];
+
+                  await scheduleNotification(
+                    allPlayerIds,
+                    'New Task Reminder: ${newTask['task']}',
+                    newTask['reminderTime'] as DateTime,
+                  );
+                }
+
+                if (isTemplate) {
+                  await _generateDailyTasks();
+                }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error adding task: $e')),
+                    SnackBar(content: Text('Error adding: $e')),
                   );
                 }
               }
@@ -425,48 +656,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _filterButton(String label) {
-    return GestureDetector(
-      onTap: () => setState(() => _selectedTab = label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: _selectedTab == label ? Colors.white : Colors.grey,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: _selectedTab == label ? Colors.black : Colors.white,
-          ),
-        ),
-      ),
+  Widget _filterChip(String label) {
+    return ChoiceChip(
+      label: Text(label, style: const TextStyle(fontSize: 14)),
+      selected: _selectedTab == label,
+      onSelected: (selected) {
+        if (selected && mounted) {
+          setState(() => _selectedTab = label);
+        }
+      },
+      selectedColor: Colors.blueAccent,
+      backgroundColor: Colors.grey[300],
+      labelStyle: TextStyle(
+          color: _selectedTab == label ? Colors.white : Colors.black),
     );
   }
 
-  Widget _errorBanner(String text) => Container(
-    margin: const EdgeInsets.all(16),
-    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-    decoration: BoxDecoration(
-      color: Colors.red[100],
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(color: Colors.red, fontSize: 16),
-      textAlign: TextAlign.center,
-    ),
-  );
-
   Widget _emptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
+        children: [
           Icon(Icons.inbox, size: 64, color: Colors.grey),
           SizedBox(height: 16),
           Text(
-            'No tasks yet. Add one to get started!',
+            'No items yet. Add one!',
             style: TextStyle(fontSize: 18, color: Colors.grey),
           ),
         ],
