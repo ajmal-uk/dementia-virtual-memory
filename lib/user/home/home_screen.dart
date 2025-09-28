@@ -124,9 +124,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _getTasksStream() {
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getTasksStream() {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return Stream.value([]);
+    if (uid == null) return Stream.empty();
+
+    final coll = _firestore.collection('user').doc(uid).collection('to_dos');
+    final todayStart = Timestamp.fromDate(
+        DateTime.now().subtract(const Duration(days: 1)).add(const Duration(hours: 24)));
+    final todayEnd = Timestamp.fromDate(DateTime.now().add(const Duration(days: 1)));
 
     if (_selectedTab == 'Recurring') {
       return _firestore
@@ -135,41 +140,27 @@ class _HomeScreenState extends State<HomeScreen> {
           .collection('recurring_tasks')
           .orderBy('createdAt', descending: true)
           .limit(50)
-          .snapshots()
-          .map((snap) => snap.docs);
-    }
-
-    final coll = _firestore.collection('user').doc(uid).collection('to_dos');
-    final todayStart = Timestamp.fromDate(
-        DateTime.now().subtract(const Duration(days: 1)).add(const Duration(hours: 24)));
-    final todayEnd = Timestamp.fromDate(DateTime.now().add(const Duration(days: 1)));
-
-    Stream<QuerySnapshot<Map<String, dynamic>>> baseStream;
-
-    if (_selectedTab == 'Today') {
-      baseStream = coll
+          .snapshots();
+    } else if (_selectedTab == 'Today') {
+      return coll
           .where('dueDate', isGreaterThanOrEqualTo: todayStart)
           .where('dueDate', isLessThan: todayEnd)
-          .orderBy('dueDate', descending: false)
+          .orderBy('dueDate')
           .limit(50)
           .snapshots();
     } else if (_selectedTab == 'Upcoming') {
-      baseStream = coll
+      return coll
           .where('dueDate', isGreaterThanOrEqualTo: todayEnd)
-          .orderBy('dueDate', descending: false)
+          .orderBy('dueDate')
           .limit(50)
           .snapshots();
     } else if (_selectedTab == 'Completed') {
-      baseStream = coll
-          .where('completed', isEqualTo: true)
-          .orderBy('dueDate', descending: true)
-          .limit(50)
-          .snapshots();
+      return coll.where('completed', isEqualTo: true).snapshots();
+    } else if (_selectedTab == 'All') {
+      return coll.orderBy('dueDate', descending: true).limit(50).snapshots();
     } else {
-      baseStream = coll.orderBy('dueDate', descending: true).limit(50).snapshots();
+      return Stream.empty();
     }
-
-    return baseStream.map((snap) => snap.docs);
   }
 
   Future<int> _getRemainingToday() async {
@@ -409,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Expanded(
-            child: StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _getTasksStream(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -447,7 +438,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
 
-                final docs = snapshot.data ?? [];
+                var docs = snapshot.data?.docs ?? [];
+                if (_selectedTab == 'Completed') {
+                  docs.sort((a, b) {
+                    final aDate = (a.data()['dueDate'] as Timestamp?) ?? Timestamp(0, 0);
+                    final bDate = (b.data()['dueDate'] as Timestamp?) ?? Timestamp(0, 0);
+                    int cmp = bDate.compareTo(aDate);
+                    if (cmp == 0) {
+                      return b.id.compareTo(a.id);
+                    }
+                    return cmp;
+                  });
+                  docs = docs.take(50).toList();
+                }
+
                 if (docs.isEmpty) {
                   return _emptyState();
                 }
