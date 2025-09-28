@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'user.dart';
-import 'notifications.dart';
 import 'profile.dart';
 
 class CareTaker extends StatefulWidget {

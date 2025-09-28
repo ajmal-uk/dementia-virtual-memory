@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({Key? key}) : super(key: key);
+  const ForgotPasswordPage({super.key});
 
   @override
   State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
@@ -33,7 +33,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Forgot Password'), backgroundColor: Colors.blueAccent, elevation: 0),
+      resizeToAvoidBottomInset: true, // Ensure content resizes when keyboard appears
+      appBar: AppBar(
+        title: const Text('Forgot Password'),
+        backgroundColor: Colors.blueAccent,
+        elevation: 0,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -42,7 +47,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             colors: [Colors.blueAccent.withValues(alpha: 0.1), Colors.white],
           ),
         ),
-        child: Padding(
+        child: SingleChildScrollView( // Add SingleChildScrollView to handle keyboard overflow
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

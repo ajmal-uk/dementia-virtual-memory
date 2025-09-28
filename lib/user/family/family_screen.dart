@@ -1,11 +1,13 @@
-// lib/user/family/family_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'family_add_screen.dart';
 import 'family_edit_screen.dart';
 import 'family_scanner_screen.dart';
+
+final logger = Logger();
 
 class FamilyScreen extends StatefulWidget {
   const FamilyScreen({super.key});
@@ -19,91 +21,70 @@ class _FamilyScreenState extends State<FamilyScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
-  List<Map<String, dynamic>> _members = [];
   String _search = '';
-  bool _isLoading = true;
-  bool _hasError = false;
+  bool _isAdding = false;
+  bool _isScanning = false;
 
   @override
   void initState() {
     super.initState();
-    _loadMembers();
     _searchController.addListener(
       () => setState(() => _search = _searchController.text.toLowerCase()),
     );
   }
 
-  Future<void> _loadMembers() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-    });
-
-    try {
-      final uid = _auth.currentUser?.uid;
-      if (uid == null) {
-        throw Exception('User not logged in');
-      }
-
-      final docRef = _firestore.collection('user').doc(uid);
-      final doc = await docRef.get();
-
-      if (!doc.exists) {
-        await docRef.set({'members': []});
-        _members = [];
-      } else {
-        final data = doc.data();
-        _members = List<Map<String, dynamic>>.from(data?['members'] ?? []);
-      }
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-        });
-      }
-    }
-  }
-
-  Future<void> _updateMembers(List<Map<String, dynamic>> newMembers) async {
+  Stream<QuerySnapshot> _getFamilyMembersStream() {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
-    try {
-      await _firestore.collection('user').doc(uid).update({
-        'members': newMembers,
-      });
-      await _loadMembers();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating members: $e')));
-      }
-    }
-  }
-
-  List<Map<String, dynamic>> get _filteredMembers {
-    if (_search.isEmpty) return _members;
-    return _members
-        .where(
-          (m) =>
-              (m['name'] ?? '').toLowerCase().contains(_search) ||
-              (m['relation'] ?? '').toLowerCase().contains(_search),
-        )
-        .toList();
+    if (uid == null) return Stream.empty();
+    return _firestore
+        .collection('user')
+        .doc(uid)
+        .collection('family_members')
+        .orderBy('name')
+        .snapshots();
   }
 
   Future<void> _callNumber(String number) async {
+    final context = this.context; // Capture context
     final uri = Uri(scheme: 'tel', path: number);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
-    } else if (mounted) {
+    } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not launch dialer for $number')),
       );
     }
+  }
+
+  Widget _buildMemberImage(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return const Icon(Icons.person, color: Colors.blueAccent);
+    }
+
+    return ClipOval(
+      child: Image.network(
+        imageUrl,
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(Icons.person, color: Colors.blueAccent);
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const SizedBox(
+            width: 40,
+            height: 40,
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.blueAccent,
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -141,201 +122,276 @@ class _FamilyScreenState extends State<FamilyScreen> {
               ),
             ),
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
-                  : _hasError
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.error, size: 64, color: Colors.red),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Error loading family members',
-                                style: TextStyle(fontSize: 18, color: Colors.red),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _loadMembers,
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-                                child: const Text('Retry', style: TextStyle(color: Colors.white)),
-                              ),
-                            ],
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _getFamilyMembersStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                        child: CircularProgressIndicator(color: Colors.blueAccent));
+                  }
+
+                  if (snapshot.hasError) {
+                    logger.e('Error loading family members: ${snapshot.error}');
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error, size: 64, color: Colors.red),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Error loading family members',
+                            style: TextStyle(fontSize: 18, color: Colors.red),
                           ),
-                        )
-                      : _filteredMembers.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(
-                                    Icons.family_restroom,
-                                    size: 64,
-                                    color: Colors.grey,
-                                  ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'No family members yet',
-                                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Add your first family member',
-                                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : RefreshIndicator(
-                              onRefresh: _loadMembers,
-                              color: Colors.blueAccent,
-                              child: ListView.builder(
-                                itemCount: _filteredMembers.length,
-                                itemBuilder: (context, index) {
-                                  final member = _filteredMembers[index];
-                                  return Card(
-                                    elevation: 3,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    child: ListTile(
-                                      leading: CircleAvatar(
-                                        backgroundColor: Colors.grey[300],
-                                        backgroundImage: (member['imageUrl'] ?? '').isNotEmpty
-                                            ? NetworkImage(member['imageUrl'])
-                                            : null,
-                                        child: (member['imageUrl'] ?? '').isEmpty
-                                            ? const Icon(Icons.person, color: Colors.blueAccent)
-                                            : null,
-                                      ),
-                                      title: Text(member['name'] ?? 'Unnamed'),
-                                      subtitle: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Relation: ${member['relation'] ?? ''}'),
-                                          Text('Phone: ${member['phone'] ?? ''}'),
-                                        ],
-                                      ),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, color: Colors.blue),
-                                            onPressed: () async {
-                                              final updatedMember = await Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => EditScreen(member: member),
-                                                ),
-                                              );
-                                              if (updatedMember != null && mounted) {
-                                                final newMembers = List<Map<String, dynamic>>.from(_members);
-                                                newMembers[_members.indexOf(member)] = updatedMember;
-                                                await _updateMembers(newMembers);
-                                              }
-                                            },
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete, color: Colors.red),
-                                            onPressed: () async {
-                                              final confirm = await showDialog<bool>(
-                                                context: context,
-                                                builder: (context) => AlertDialog(
-                                                  title: const Text('Delete Family Member'),
-                                                  content: const Text('Are you sure?'),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () => Navigator.pop(context, false),
-                                                      child: const Text('Cancel'),
-                                                    ),
-                                                    ElevatedButton(
-                                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                      onPressed: () => Navigator.pop(context, true),
-                                                      child: const Text('Delete', style: TextStyle(color: Colors.white)),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                              if (confirm == true && mounted) {
-                                                final newMembers = List<Map<String, dynamic>>.from(_members);
-                                                newMembers.removeAt(_members.indexOf(member));
-                                                await _updateMembers(newMembers);
-                                              }
-                                            },
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.phone, color: Colors.green),
-                                            onPressed: () {
-                                              final phone = member['phone'];
-                                              if (phone != null && phone.isNotEmpty) {
-                                                _callNumber(phone);
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => setState(() {}),
+                            style:
+                                ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                            child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+                  final filteredDocs = docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    final relation = (data['relation'] ?? '').toString().toLowerCase();
+                    return name.contains(_search) || relation.contains(_search);
+                  }).toList();
+
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: filteredDocs.isEmpty
+                            ? const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.family_restroom,
+                                      size: 64,
+                                      color: Colors.grey,
                                     ),
-                                  );
-                                },
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'No family members yet',
+                                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Add your first family member',
+                                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: () async => setState(() {}),
+                                color: Colors.blueAccent,
+                                child: ListView.builder(
+                                  itemCount: filteredDocs.length,
+                                  itemBuilder: (context, index) {
+                                    final doc = filteredDocs[index];
+                                    final member = doc.data() as Map<String, dynamic>;
+                                    return Card(
+                                      elevation: 3,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12)),
+                                      child: ListTile(
+                                        leading: CircleAvatar(
+                                          backgroundColor: Colors.grey[300],
+                                          child: _buildMemberImage(member['imageUrl']),
+                                        ),
+                                        title: Text(member['name'] ?? 'Unnamed'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Relation: ${member['relation'] ?? ''}'),
+                                            Text('Phone: ${member['phone'] ?? ''}'),
+                                          ],
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, color: Colors.blue),
+                                              onPressed: () async {
+                                                final editContext = context; // Capture context
+                                                try {
+                                                  await Navigator.push(
+                                                    editContext,
+                                                    MaterialPageRoute(
+                                                      builder: (context) => EditScreen(
+                                                        memberId: doc.id, // Pass the document ID
+                                                        memberData: doc.data() as Map<String, dynamic>, // Pass the member data
+                                                      ),
+                                                    ),
+                                                  );
+                                                } catch (e) {
+                                                  logger.e('Error navigating to edit screen: $e');
+                                                  if (editContext.mounted) {
+                                                    ScaffoldMessenger.of(editContext).showSnackBar(
+                                                      SnackBar(content: Text('Error opening edit screen: $e')),
+                                                    );
+                                                  }
+                                                }
+                                              },
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, color: Colors.red),
+                                              onPressed: () async {
+                                                final deleteContext = context; // Capture context
+                                                final confirm = await showDialog<bool>(
+                                                  context: deleteContext,
+                                                  builder: (context) => AlertDialog(
+                                                    title: const Text('Delete Family Member'),
+                                                    content: const Text('Are you sure?'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(context, false),
+                                                        child: const Text('Cancel'),
+                                                      ),
+                                                      ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(
+                                                            backgroundColor: Colors.red),
+                                                        onPressed: () => Navigator.pop(context, true),
+                                                        child: const Text('Delete',
+                                                            style: TextStyle(color: Colors.white)),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                                if (confirm == true && deleteContext.mounted) {
+                                                  try {
+                                                    await doc.reference.delete();
+                                                  } catch (e) {
+                                                    logger.e('Error deleting member: $e');
+                                                    if (deleteContext.mounted) {
+                                                      ScaffoldMessenger.of(deleteContext)
+                                                          .showSnackBar(
+                                                        SnackBar(content: Text('Error deleting: $e')),
+                                                      );
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.phone, color: Colors.green),
+                                              onPressed: () {
+                                                final phone = member['phone'];
+                                                if (phone != null && phone.isNotEmpty) {
+                                                  _callNumber(phone);
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  FloatingActionButton.extended(
-                    backgroundColor: Colors.orange,
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Add Member', style: TextStyle(color: Colors.white)),
-                    onPressed: () async {
-                      final newMember = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AddScreen(),
-                        ),
-                      );
-                      if (newMember != null && mounted) {
-                        final newMembers = List<Map<String, dynamic>>.from(_members)..add(newMember);
-                        await _updateMembers(newMembers);
-                      }
-                    },
-                  ),
-                  FloatingActionButton.extended(
-                    backgroundColor: Colors.orange,
-                    icon: const Icon(Icons.camera_alt, color: Colors.white),
-                    label: const Text('Scan', style: TextStyle(color: Colors.white)),
-                    onPressed: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ScannerScreen(
-                            members: _members
-                                .map(
-                                  (m) => m.map(
-                                    (k, v) => MapEntry(k, v?.toString() ?? ''),
+                      ),
+                      // Move buttons inside StreamBuilder to access snapshot
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _isAdding
+                                ? const CircularProgressIndicator(color: Colors.orange)
+                                : FloatingActionButton.extended(
+                                    backgroundColor: Colors.orange,
+                                    icon: const Icon(Icons.add, color: Colors.white),
+                                    label: const Text('Add Member',
+                                        style: TextStyle(color: Colors.white)),
+                                    onPressed: () async {
+                                      final addContext = context; // Capture context
+                                      setState(() => _isAdding = true);
+                                      try {
+                                        await Navigator.push(
+                                          addContext,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AddScreen(),
+                                          ),
+                                        );
+                                      } catch (e) {
+                                        logger.e('Error navigating to add screen: $e');
+                                        if (addContext.mounted) {
+                                          ScaffoldMessenger.of(addContext).showSnackBar(
+                                            SnackBar(
+                                                content: Text('Error opening add screen: $e')),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) setState(() => _isAdding = false);
+                                      }
+                                    },
                                   ),
-                                )
-                                .toList(),
-                          ),
+                            _isScanning
+                                ? const CircularProgressIndicator(color: Colors.orange)
+                                : FloatingActionButton.extended(
+                                    backgroundColor: Colors.orange,
+                                    icon: const Icon(Icons.camera_alt, color: Colors.white),
+                                    label:
+                                        const Text('Scan', style: TextStyle(color: Colors.white)),
+                                    onPressed: () async {
+                                      final scanContext = context; // Capture context
+                                      setState(() => _isScanning = true);
+                                      try {
+                                        final result = await Navigator.push(
+                                          scanContext,
+                                          MaterialPageRoute(
+                                            builder: (context) => ScannerScreen(
+                                              members: snapshot.data?.docs.map((doc) {
+                                                    final data = doc.data() as Map<String, dynamic>;
+                                                    return data
+                                                        .map((key, value) => MapEntry(key, value?.toString() ?? ''));
+                                                  }).toList() ?? [],
+                                            ),
+                                          ),
+                                        );
+                                        if (result != null && result['matchFound'] && scanContext.mounted) {
+                                          ScaffoldMessenger.of(scanContext).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Match found: ${result['memberName']}'),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        logger.e('Error navigating to ScannerScreen: $e');
+                                        if (scanContext.mounted) {
+                                          ScaffoldMessenger.of(scanContext).showSnackBar(
+                                            SnackBar(content: Text('Error opening scanner: $e')),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) setState(() => _isScanning = false);
+                                      }
+                                    },
+                                  ),
+                          ],
                         ),
-                      );
-                      if (result != null && result['matchFound'] && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Match found: ${result['memberName']}',
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }

@@ -98,7 +98,12 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Register as ${widget.role.toUpperCase()}'), backgroundColor: Colors.blueAccent, elevation: 0),
+      resizeToAvoidBottomInset: true, // Ensure content resizes when keyboard appears
+      appBar: AppBar(
+        title: Text('Register as ${widget.role.toUpperCase()}'),
+        backgroundColor: Colors.blueAccent,
+        elevation: 0,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

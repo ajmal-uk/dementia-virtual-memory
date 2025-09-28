@@ -1,59 +1,107 @@
-// lib/user/family/family_edit_screen.dart
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:logger/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:image/image.dart' as img;
+
+final logger = Logger();
 
 class EditScreen extends StatefulWidget {
-  final Map<String, dynamic> member;
-  const EditScreen({Key? key, required this.member}) : super(key: key);
+  final String memberId;
+  final Map<String, dynamic> memberData;
+
+  const EditScreen({super.key, required this.memberId, required this.memberData});
 
   @override
   State<EditScreen> createState() => _EditScreenState();
 }
 
 class _EditScreenState extends State<EditScreen> {
-  late TextEditingController _nameController;
-  late TextEditingController _relationController;
-  late TextEditingController _phoneController;
-  String _imageUrl = '';
-  File? _newImage;
+  final _nameController = TextEditingController();
+  final _relationController = TextEditingController();
+  final _phoneController = TextEditingController();
+  File? _image;
+  String? _existingImageUrl;
   final _picker = ImagePicker();
   final cloudinary = CloudinaryPublic('dts8hgf4f', 'family_members');
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.member['name']);
-    _relationController = TextEditingController(text: widget.member['relation']);
-    _phoneController = TextEditingController(text: widget.member['phone']);
-    _imageUrl = widget.member['imageUrl'] ?? '';
+    // Initialize text controllers with existing member data
+    _nameController.text = widget.memberData['name'] ?? '';
+    _relationController.text = widget.memberData['relation'] ?? '';
+    _phoneController.text = widget.memberData['phone'] ?? '';
+    _existingImageUrl = widget.memberData['imageUrl'] ?? '';
   }
 
   Future<void> _pickImage() async {
     final status = await Permission.photos.request();
     if (!status.isGranted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Permission denied')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo permission denied')),
+        );
+      }
       return;
     }
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null && mounted) setState(() => _newImage = File(picked.path));
+    try {
+      final picked = await _picker.pickImage(source: ImageSource.gallery);
+      if (picked != null && mounted) {
+        setState(() => _image = File(picked.path));
+      }
+    } catch (e) {
+      logger.e('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
   }
 
-  Future<String> _uploadImage() async {
-    if (_newImage == null) return _imageUrl;
+  static Uint8List _processImage(Uint8List bytes) {
+    final image = img.decodeImage(bytes);
+    if (image == null) return bytes;
+
+    img.Image resized = image;
+    const maxSize = 512;
+    if (image.width > maxSize || image.height > maxSize) {
+      if (image.width > image.height) {
+        resized = img.copyResize(image, width: maxSize);
+      } else {
+        resized = img.copyResize(image, height: maxSize);
+      }
+    }
+    return img.encodeJpg(resized, quality: 85);
+  }
+
+  Future<String?> _uploadImage() async {
+    if (_image == null) return _existingImageUrl;
     try {
-      final r = await cloudinary.uploadFile(CloudinaryFile.fromFile(_newImage!.path));
+      final bytes = await _image!.readAsBytes();
+      final processedBytes = await compute(_processImage, bytes);
+      final r = await cloudinary
+          .uploadFile(CloudinaryFile.fromBytesData(processedBytes, identifier: 'family_member.jpg'))
+          .timeout(const Duration(seconds: 30));
       return r.secureUrl;
     } catch (e) {
+      logger.e('Image upload failed: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image upload failed: $e')),
+        );
       }
-      return _imageUrl;
+      return _existingImageUrl;
     }
   }
 
@@ -62,8 +110,9 @@ class _EditScreenState extends State<EditScreen> {
         _relationController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('All fields are required')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All fields are required')),
+        );
       }
       return;
     }
@@ -79,17 +128,39 @@ class _EditScreenState extends State<EditScreen> {
       );
     }
 
-    final url = await _uploadImage();
-    if (!mounted) return;
+    try {
+      final url = await _uploadImage();
+      if (!mounted) return;
 
-    Navigator.pop(context);
-    Navigator.pop(context, {
-      'name': _nameController.text.trim(),
-      'relation': _relationController.text.trim(),
-      'phone': _phoneController.text.trim(),
-      'imageUrl': url,
-    });
-    if (mounted) setState(() => _isSaving = false);
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) throw Exception('User not logged in');
+
+      await _firestore
+          .collection('user')
+          .doc(uid)
+          .collection('family_members')
+          .doc(widget.memberId)
+          .update({
+        'name': _nameController.text.trim(),
+        'relation': _relationController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'imageUrl': url ?? '',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      Navigator.pop(context); // Close loading dialog
+      Navigator.pop(context); // Return to family screen
+    } catch (e) {
+      logger.e('Error updating member: $e');
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -114,7 +185,7 @@ class _EditScreenState extends State<EditScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Member Details',
+                'Edit Member Details',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
               ),
               const SizedBox(height: 24),
@@ -135,10 +206,12 @@ class _EditScreenState extends State<EditScreen> {
                       CircleAvatar(
                         radius: 60,
                         backgroundColor: Colors.grey[300],
-                        backgroundImage: _newImage != null
-                            ? FileImage(_newImage!)
-                            : (_imageUrl.isNotEmpty ? NetworkImage(_imageUrl) : null),
-                        child: _newImage == null && _imageUrl.isEmpty
+                        backgroundImage: _image != null
+                            ? FileImage(_image!)
+                            : _existingImageUrl != null && _existingImageUrl!.isNotEmpty
+                                ? NetworkImage(_existingImageUrl!)
+                                : null,
+                        child: _image == null && (_existingImageUrl == null || _existingImageUrl!.isEmpty)
                             ? const Icon(Icons.person, size: 60, color: Colors.blueAccent)
                             : null,
                       ),
@@ -166,7 +239,7 @@ class _EditScreenState extends State<EditScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         minimumSize: const Size(double.infinity, 50),
                       ),
-                      child: const Text('Save Changes', style: TextStyle(fontSize: 18, color: Colors.white)),
+                      child: const Text('Update Member', style: TextStyle(fontSize: 18, color: Colors.white)),
                     ),
             ],
           ),

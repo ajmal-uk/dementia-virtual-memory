@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       logger.e('Error checking banned status: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error checking user status: $e')),
+        );
+      }
     }
   }
 
@@ -112,6 +116,11 @@ class _HomeScreenState extends State<HomeScreen> {
       await prefs.setString('last_generate_date', todayStr);
     } catch (e) {
       logger.e('Error generating daily tasks: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating tasks: $e')),
+        );
+      }
     }
   }
 
@@ -125,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
           .doc(uid)
           .collection('recurring_tasks')
           .orderBy('createdAt', descending: true)
-          .limit(50) // Limit to improve performance
+          .limit(50)
           .snapshots()
           .map((snap) => snap.docs);
     }
@@ -173,14 +182,38 @@ class _HomeScreenState extends State<HomeScreen> {
     final todayEnd = Timestamp.fromDate(DateTime.now().add(const Duration(days: 1)));
 
     try {
+      // Workaround: Simplified query to avoid composite index requirement
       final snap = await coll
-          .where('completed', isEqualTo: false)
           .where('dueDate', isGreaterThanOrEqualTo: todayStart)
           .where('dueDate', isLessThan: todayEnd)
           .get();
-      return snap.docs.length;
+      // Filter completed tasks in code
+      final incompleteTasks = snap.docs
+          .where((doc) => doc.data()['completed'] == false)
+          .length;
+      return incompleteTasks;
     } catch (e) {
       logger.e('Error getting remaining today: $e');
+      if (e.toString().contains('requires an index') && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Database setup in progress. Please try again in a few minutes or contact support.',
+            ),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () {
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching tasks: $e')),
+        );
+      }
       return 0;
     }
   }
@@ -393,10 +426,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           const Icon(Icons.error, size: 64, color: Colors.red),
                           const SizedBox(height: 16),
-                          const Text(
-                            'Failed to load tasks.',
+                          Text(
+                            snapshot.error.toString().contains('requires an index')
+                                ? 'Database setup in progress. Please try again in a few minutes or contact support.'
+                                : 'Failed to load tasks: ${snapshot.error}',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 16),
+                            style: const TextStyle(fontSize: 16),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(

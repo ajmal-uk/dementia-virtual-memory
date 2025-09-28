@@ -98,6 +98,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final isAdmin = widget.role == 'admin';
     return Scaffold(
+      resizeToAvoidBottomInset: true, // Ensure content resizes when keyboard appears
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -107,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
+          child: SingleChildScrollView( // Add SingleChildScrollView to handle keyboard overflow
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

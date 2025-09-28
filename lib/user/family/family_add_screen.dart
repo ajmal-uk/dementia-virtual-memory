@@ -1,12 +1,18 @@
-// lib/user/family/family_add_screen.dart
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:logger/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:image/image.dart' as img;
+
+final logger = Logger();
 
 class AddScreen extends StatefulWidget {
-  const AddScreen({Key? key}) : super(key: key);
+  const AddScreen({super.key});
 
   @override
   State<AddScreen> createState() => _AddScreenState();
@@ -19,30 +25,66 @@ class _AddScreenState extends State<AddScreen> {
   File? _image;
   final _picker = ImagePicker();
   final cloudinary = CloudinaryPublic('dts8hgf4f', 'family_members');
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
   bool _isSaving = false;
 
   Future<void> _pickImage() async {
     final status = await Permission.photos.request();
     if (!status.isGranted) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Permission denied')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo permission denied')),
+        );
       }
       return;
     }
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null && mounted) setState(() => _image = File(picked.path));
+    try {
+      final picked = await _picker.pickImage(source: ImageSource.gallery);
+      if (picked != null && mounted) {
+        setState(() => _image = File(picked.path));
+      }
+    } catch (e) {
+      logger.e('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
+  static Uint8List _processImage(Uint8List bytes) {
+    final image = img.decodeImage(bytes);
+    if (image == null) return bytes;
+
+    img.Image resized = image;
+    const maxSize = 512;
+    if (image.width > maxSize || image.height > maxSize) {
+      if (image.width > image.height) {
+        resized = img.copyResize(image, width: maxSize);
+      } else {
+        resized = img.copyResize(image, height: maxSize);
+      }
+    }
+    return img.encodeJpg(resized, quality: 85);
   }
 
   Future<String?> _uploadImage() async {
     if (_image == null) return '';
     try {
-      final r = await cloudinary.uploadFile(CloudinaryFile.fromFile(_image!.path));
+      final bytes = await _image!.readAsBytes();
+      final processedBytes = await compute(_processImage, bytes);
+      final r = await cloudinary
+          .uploadFile(CloudinaryFile.fromBytesData(processedBytes, identifier: 'family_member.jpg'))
+          .timeout(const Duration(seconds: 30));
       return r.secureUrl;
     } catch (e) {
+      logger.e('Image upload failed: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image upload failed: $e')),
+        );
       }
       return '';
     }
@@ -53,8 +95,9 @@ class _AddScreenState extends State<AddScreen> {
         _relationController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('All fields are required')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All fields are required')),
+        );
       }
       return;
     }
@@ -70,17 +113,39 @@ class _AddScreenState extends State<AddScreen> {
       );
     }
 
-    final url = await _uploadImage();
-    if (!mounted) return;
+    try {
+      final url = await _uploadImage();
+      if (!mounted) return;
 
-    Navigator.pop(context); // close loading
-    Navigator.pop(context, {
-      'name': _nameController.text.trim(),
-      'relation': _relationController.text.trim(),
-      'phone': _phoneController.text.trim(),
-      'imageUrl': url ?? '',
-    });
-    if (mounted) setState(() => _isSaving = false);
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) throw Exception('User not logged in');
+
+      await _firestore
+          .collection('user')
+          .doc(uid)
+          .collection('family_members')
+          .add({
+        'name': _nameController.text.trim(),
+        'relation': _relationController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'imageUrl': url ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      if (mounted){
+        Navigator.pop(context); // Close loading dialog
+        Navigator.pop(context); 
+      }// Return to family screen
+    } catch (e) {
+      logger.e('Error saving member: $e');
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
