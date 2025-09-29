@@ -1,5 +1,6 @@
 // lib/user/user_bottom_nav.dart
 import 'package:flutter/material.dart';
+import 'diary/diary_screen.dart';
 import 'family/family_screen.dart';
 import 'home/home_screen.dart';
 import 'caretaker/caretaker_screen.dart';
@@ -20,6 +21,7 @@ class _UserBottomNavState extends State<UserBottomNav> {
     const FamilyScreen(),
     const CaretakerScreen(),
     const UserProfile(),
+    const DiaryScreen(), 
   ];
 
   @override
@@ -40,6 +42,7 @@ class _UserBottomNavState extends State<UserBottomNav> {
             label: 'CareTaker',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Diary'), // New Diary item
         ],
       ),
     );
