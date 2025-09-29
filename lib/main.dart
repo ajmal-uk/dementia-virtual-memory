@@ -14,7 +14,7 @@ import 'admin/admin_bottom_nav.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  OneSignal.initialize("73673a14-2de9-44c4-a9c5-dd531da39b59");
+  OneSignal.initialize(dotenv.env['ONE_SIGNAL_API_KEY']!);
   OneSignal.Notifications.requestPermission(true);
 
   final prefs = await SharedPreferences.getInstance();
