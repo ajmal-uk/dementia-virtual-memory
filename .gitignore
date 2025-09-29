@@ -25,18 +25,6 @@ android/.gradle/
 android/app/build/
 android/local.properties
 
-# macOS
-macos/Flutter/ephemeral/
-
-# Windows
-windows/Flutter/ephemeral/
-
-# Linux
-linux/Flutter/ephemeral/
-
-# Web
-web/.dart_tool/
-
 # IDE
 .idea/
 *.iml
