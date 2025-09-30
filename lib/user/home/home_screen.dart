@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../notifications/notifications_screen.dart';
 import '../../utils/notification_helper.dart';
 import 'add_task_page.dart';
+import 'ai_chat_page.dart';
 import 'edit_task_page.dart';
 
 final logger = Logger();
@@ -632,65 +633,90 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.orange,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add', style: TextStyle(color: Colors.white)),
-        onPressed: () async {
-          if (!mounted) return;
-          final newTask = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => AddTaskPage(isTemplate: _selectedTab == 'Recurring')),
-          );
-          if (newTask != null && mounted) {
-            final uid = _auth.currentUser?.uid;
-            if (uid != null) {
-              try {
-                final isTemplate = newTask['recurring'] == 'Daily';
-                final coll = isTemplate ? 'recurring_tasks' : 'to_dos';
-                await _firestore.collection('user').doc(uid).collection(coll).add({
-                  'task': newTask['task'],
-                  'description': newTask['description'],
-                  if (!isTemplate) 'completed': false,
-                  'createdAt': Timestamp.now(),
-                  if (!isTemplate)
-                    'dueDate': newTask['dueDate'] != null
-                        ? Timestamp.fromDate(newTask['dueDate'] as DateTime)
-                        : null,
-                  if (!isTemplate)
-                    'reminderTime': newTask['reminderTime'] != null
-                        ? Timestamp.fromDate(newTask['reminderTime'] as DateTime)
-                        : null,
-                  if (isTemplate) 'dailyDueTime': newTask['dailyDueTime'],
-                  if (isTemplate) 'dailyReminderTime': newTask['dailyReminderTime'],
-                  'createdBy': 'user',
-                });
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AIChatPage()),
+              );
+            },
+            backgroundColor: Colors.blue, // Blue background
+            heroTag: 'ai_chat',
+            child: ClipOval(
+              child: Image.asset(
+                'assets/aiIcon.png',
+                width: 50,
+                height: 50,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton.extended(
+            onPressed: () async {
+              if (!mounted) return;
+              final newTask = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AddTaskPage(isTemplate: _selectedTab == 'Recurring')),
+              );
+              if (newTask != null && mounted) {
+                final uid = _auth.currentUser?.uid;
+                if (uid != null) {
+                  try {
+                    final isTemplate = newTask['recurring'] == 'Daily';
+                    final coll = isTemplate ? 'recurring_tasks' : 'to_dos';
+                    await _firestore.collection('user').doc(uid).collection(coll).add({
+                      'task': newTask['task'],
+                      'description': newTask['description'],
+                      if (!isTemplate) 'completed': false,
+                      'createdAt': Timestamp.now(),
+                      if (!isTemplate)
+                        'dueDate': newTask['dueDate'] != null
+                            ? Timestamp.fromDate(newTask['dueDate'] as DateTime)
+                            : null,
+                      if (!isTemplate)
+                        'reminderTime': newTask['reminderTime'] != null
+                            ? Timestamp.fromDate(newTask['reminderTime'] as DateTime)
+                            : null,
+                      if (isTemplate) 'dailyDueTime': newTask['dailyDueTime'],
+                      if (isTemplate) 'dailyReminderTime': newTask['dailyReminderTime'],
+                      'createdBy': 'user',
+                    });
 
-                if (!isTemplate && newTask['reminderTime'] != null) {
-                  final userPlayerIds = await _getUserPlayerIds();
-                  final caretakerPlayerIds = await _getCaretakerPlayerIds();
-                  final allPlayerIds = [...userPlayerIds, ...caretakerPlayerIds];
+                    if (!isTemplate && newTask['reminderTime'] != null) {
+                      final userPlayerIds = await _getUserPlayerIds();
+                      final caretakerPlayerIds = await _getCaretakerPlayerIds();
+                      final allPlayerIds = [...userPlayerIds, ...caretakerPlayerIds];
 
-                  await scheduleNotification(
-                    allPlayerIds,
-                    'New Task Reminder: ${newTask['task']}',
-                    newTask['reminderTime'] as DateTime,
-                  );
-                }
+                      await scheduleNotification(
+                        allPlayerIds,
+                        'New Task Reminder: ${newTask['task']}',
+                        newTask['reminderTime'] as DateTime,
+                      );
+                    }
 
-                if (isTemplate) {
-                  await _generateDailyTasks();
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error adding: $e')),
-                  );
+                    if (isTemplate) {
+                      await _generateDailyTasks();
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error adding: $e')),
+                      );
+                    }
+                  }
                 }
               }
-            }
-          }
-        },
+            },
+            backgroundColor: Colors.orange,
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text('Add', style: TextStyle(color: Colors.white)),
+            heroTag: 'add_task',
+          ),
+        ],
       ),
     );
   }
