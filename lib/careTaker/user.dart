@@ -40,20 +40,27 @@ class _UserState extends State<User> {
     }
 
     try {
-      final caretakerDoc = await _firestore.collection('caretaker').doc(caretakerUid).get();
+      final caretakerDoc = await _firestore
+          .collection('caretaker')
+          .doc(caretakerUid)
+          .get();
       final data = caretakerDoc.data();
 
       final isConnectedField = data?['isConnected'] as bool? ?? false;
       final patientUid = data?['currentConnectionId'] as String?;
 
       if (isConnectedField && patientUid != null && patientUid.isNotEmpty) {
-        final patientDoc = await _firestore.collection('user').doc(patientUid).get();
+        final patientDoc = await _firestore
+            .collection('user')
+            .doc(patientUid)
+            .get();
 
         if (patientDoc.exists) {
           if (mounted) {
             setState(() {
               _patientUid = patientUid;
-              _patientName = patientDoc.data()?['fullName'] ?? 'Unknown Patient';
+              _patientName =
+                  patientDoc.data()?['fullName'] ?? 'Unknown Patient';
               _isConnected = true;
               _isLoading = false; // FINALLY DONE LOADING
             });
@@ -85,7 +92,10 @@ class _UserState extends State<User> {
   Stream<QuerySnapshot<Map<String, dynamic>>> _getTasksStream() {
     if (_patientUid == null) return Stream.empty();
 
-    final coll = _firestore.collection('user').doc(_patientUid).collection('to_dos');
+    final coll = _firestore
+        .collection('user')
+        .doc(_patientUid)
+        .collection('to_dos');
 
     final now = DateTime.now();
     final todayMidnight = DateTime(now.year, now.month, now.day);
@@ -113,11 +123,9 @@ class _UserState extends State<User> {
           .snapshots();
     } else if (_selectedTab == 'Completed') {
       // Non-indexed query for Completed tab (sorted locally)
-      return coll.where('completed', isEqualTo: true).snapshots(); 
+      return coll.where('completed', isEqualTo: true).snapshots();
     } else if (_selectedTab == 'All') {
-      return coll
-          .orderBy('dueDate', descending: true)
-          .snapshots();
+      return coll.orderBy('dueDate', descending: true).snapshots();
     } else {
       return Stream.empty();
     }
@@ -133,10 +141,10 @@ class _UserState extends State<User> {
 
   // Helper to format Time Map (safe)
   String _formatTimeMap(Map<String, dynamic>? timeMap) {
-      if (timeMap == null) return 'N/A';
-      final hour = (timeMap['hour'] as int? ?? 0).toString().padLeft(2, '0');
-      final min = (timeMap['min'] as int? ?? 0).toString().padLeft(2, '0');
-      return '$hour:$min';
+    if (timeMap == null) return 'N/A';
+    final hour = (timeMap['hour'] as int? ?? 0).toString().padLeft(2, '0');
+    final min = (timeMap['min'] as int? ?? 0).toString().padLeft(2, '0');
+    return '$hour:$min';
   }
 
   // --- UI Builders ---
@@ -161,7 +169,6 @@ class _UserState extends State<User> {
             const Text(
               'Condition: Dementia, recovering from surgery',
             ), // Static for now
-            const Text('Room: 203B'), // Static for now
           ],
         ),
       ),
@@ -170,28 +177,36 @@ class _UserState extends State<User> {
 
   Widget _buildTaskCard(DocumentSnapshot doc) {
     // We can safely cast data()! to Map<String, dynamic> since we check doc.exists in the StreamBuilder
-    final task = doc.data()! as Map<String, dynamic>; 
+    final task = doc.data()! as Map<String, dynamic>;
     final isTemplate = _selectedTab == 'Recurring';
-    
+
     // Fields from Firestore document
-    final completed = isTemplate ? false : (task['completed'] as bool? ?? false);
+    final completed = isTemplate
+        ? false
+        : (task['completed'] as bool? ?? false);
     final title = task['task'] as String? ?? 'Untitled Task';
     final details = task['description'] as String? ?? 'No details provided.';
     final dueDate = task['dueDate'] as Timestamp?;
     final reminderTime = task['reminderTime'] as Timestamp?;
     final createdBy = task['createdBy'] as String? ?? 'N/A';
 
-    final Map<String, dynamic>? dailyDueTime = task['dailyDueTime'] as Map<String, dynamic>?;
-    final Map<String, dynamic>? dailyReminderTime = task['dailyReminderTime'] as Map<String, dynamic>?;
-    
+    final Map<String, dynamic>? dailyDueTime =
+        task['dailyDueTime'] as Map<String, dynamic>?;
+    final Map<String, dynamic>? dailyReminderTime =
+        task['dailyReminderTime'] as Map<String, dynamic>?;
+
     return Card(
       elevation: 3,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ExpansionTile(
         key: Key(doc.id),
         leading: Icon(
-          isTemplate ? Icons.repeat : (completed ? Icons.check_circle : Icons.list_alt),
-          color: isTemplate ? Colors.indigo : (completed ? Colors.green : Colors.orange),
+          isTemplate
+              ? Icons.repeat
+              : (completed ? Icons.check_circle : Icons.list_alt),
+          color: isTemplate
+              ? Colors.indigo
+              : (completed ? Colors.green : Colors.orange),
         ),
         title: Text(
           title,
@@ -221,18 +236,24 @@ class _UserState extends State<User> {
                   ),
                 const Divider(height: 1, color: Colors.grey),
                 const SizedBox(height: 8),
-                
+
                 // Displaying conditional fields
-                Text('Created At: ${_formatTimestamp(task['createdAt'] as Timestamp?)}'),
+                Text(
+                  'Created At: ${_formatTimestamp(task['createdAt'] as Timestamp?)}',
+                ),
                 Text('Created By: $createdBy'),
-                
+
                 if (!isTemplate) ...[
-                  Text('Scheduled Reminder: ${reminderTime is Timestamp ? _formatTimestamp(reminderTime) : 'None'}'),
+                  Text(
+                    'Scheduled Reminder: ${reminderTime is Timestamp ? _formatTimestamp(reminderTime) : 'None'}',
+                  ),
                 ],
-                
+
                 if (isTemplate) ...[
                   Text('Daily Due Time: ${_formatTimeMap(dailyDueTime)}'),
-                  Text('Daily Reminder Time: ${_formatTimeMap(dailyReminderTime)}'),
+                  Text(
+                    'Daily Reminder Time: ${_formatTimeMap(dailyReminderTime)}',
+                  ),
                 ],
               ],
             ),
@@ -254,7 +275,8 @@ class _UserState extends State<User> {
       selectedColor: Colors.indigo,
       backgroundColor: Colors.grey[300],
       labelStyle: TextStyle(
-          color: _selectedTab == label ? Colors.white : Colors.black),
+        color: _selectedTab == label ? Colors.white : Colors.black,
+      ),
     );
   }
 
@@ -319,7 +341,7 @@ class _UserState extends State<User> {
       ),
       body: Column(
         children: [
-          _buildPatientDetails(), 
+          _buildPatientDetails(),
           const Divider(),
           // Task Filtering Chips
           SingleChildScrollView(
@@ -341,7 +363,7 @@ class _UserState extends State<User> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _getTasksStream(), 
+              stream: _getTasksStream(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(
@@ -353,7 +375,9 @@ class _UserState extends State<User> {
                 }
                 if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
                   return Center(
-                    child: Text('No ${_selectedTab} tasks found for this patient.'),
+                    child: Text(
+                      'No ${_selectedTab} tasks found for this patient.',
+                    ),
                   );
                 }
 
@@ -363,17 +387,21 @@ class _UserState extends State<User> {
                 if (_selectedTab == 'Completed') {
                   docs.sort((a, b) {
                     // FIX IS HERE: Explicitly cast the data() result to Map<String, dynamic>
-                    final aData = a.data() as Map<String, dynamic>; 
-                    final bData = b.data() as Map<String, dynamic>; 
-                    
-                    final aDate = (aData['dueDate'] as Timestamp?)?.toDate() ?? DateTime(0);
-                    final bDate = (bData['dueDate'] as Timestamp?)?.toDate() ?? DateTime(0);
-                    
+                    final aData = a.data() as Map<String, dynamic>;
+                    final bData = b.data() as Map<String, dynamic>;
+
+                    final aDate =
+                        (aData['dueDate'] as Timestamp?)?.toDate() ??
+                        DateTime(0);
+                    final bDate =
+                        (bData['dueDate'] as Timestamp?)?.toDate() ??
+                        DateTime(0);
+
                     // Sort descending (newest completed tasks first)
                     return bDate.compareTo(aDate);
                   });
                 }
-                
+
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, index) {

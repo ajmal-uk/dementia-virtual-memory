@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'notifications.dart';
 import 'user.dart';
 import 'profile.dart';
+import 'notifications.dart';
 
 class CareTaker extends StatefulWidget {
   const CareTaker({super.key});
@@ -15,8 +15,8 @@ class _CareTakerState extends State<CareTaker> {
 
   final List<Widget> _pages = const [
     User(), // From home.dart
-    Notifications(),
-    Profile(), 
+    NotificationsScreen(), // From notifications.dart
+    Profile(), // From profile.dart
   ];
 
   void _onItemTapped(int index) {

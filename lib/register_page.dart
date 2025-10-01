@@ -127,17 +127,19 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  // Cloudinary upload logic
+  // Cloudinary upload logic - Uses CLOUDINARY_CLOUD_NAME from .env
   Future<String?> _uploadFile(String? filePath, String preset) async {
     if (filePath == null) return null;
 
     final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'];
 
-    if (cloudName == null) {
+    if (cloudName == null || cloudName.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error: CLOUDINARY_CLOUD_NAME missing in .env'),
+            content: Text(
+              'Error: CLOUDINARY_CLOUD_NAME missing or empty in .env',
+            ),
           ),
         );
       }
@@ -150,7 +152,8 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       var request = http.MultipartRequest('POST', uri)
-        ..fields['upload_preset'] = preset
+        ..fields['upload_preset'] =
+            preset // Use the specific preset
         ..fields['cloud_name'] = cloudName;
 
       final file = await http.MultipartFile.fromPath('file', filePath);
@@ -162,20 +165,31 @@ class _RegisterPageState extends State<RegisterPage> {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         final secureUrl = responseData['secure_url'];
-        if (secureUrl is String) return secureUrl;
+
+        // Ensure a String URL is returned
+        if (secureUrl is String && secureUrl.isNotEmpty) return secureUrl;
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Upload succeeded but no URL found.')),
+            const SnackBar(
+              content: Text('Upload succeeded but no valid URL found.'),
+            ),
           );
         }
         return null;
       } else {
         if (mounted) {
+          // Attempt to get a detailed error message from Cloudinary
+          String errorMessage = response.body;
+          try {
+            final errorResponse = json.decode(response.body);
+            errorMessage = errorResponse['error']?['message'] ?? response.body;
+          } catch (_) {
+            // response body wasn't JSON, use it as is
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Cloudinary upload failed: ${response.body}'),
-            ),
+            SnackBar(content: Text('Cloudinary upload failed: $errorMessage')),
           );
         }
         return null;
@@ -191,8 +205,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _register() async {
-    // MODIFIED: Removed _selectedProfileImagePath == null check
-    // Basic form validation for non-empty fields (excluding optional images)
+    // Basic form validation for non-empty fields
     if (nameController.text.trim().isEmpty ||
         usernameController.text.trim().isEmpty ||
         emailController.text.trim().isEmpty ||
@@ -268,10 +281,13 @@ class _RegisterPageState extends State<RegisterPage> {
           .get();
       if (snapPhone.docs.isNotEmpty) throw 'Phone number already exists';
 
+      // UPLOAD PROFILE IMAGE using the requested preset: 'care_taker_image'
       profileUrl = await _uploadFile(
         _selectedProfileImagePath,
-        'care_taker_profile',
+        'care_taker_image',
       );
+
+      // UPLOAD CERTIFICATE IMAGE (Nurse only) using the requested preset: 'graduation'
       if (widget.role == 'caretaker' && _caregiverType == CaregiverType.nurse) {
         certificateUrl = await _uploadFile(
           _selectedCertificatePath,
@@ -299,8 +315,8 @@ class _RegisterPageState extends State<RegisterPage> {
           'locality': localityController.text.trim(),
           'city': cityController.text.trim(),
           'state': stateController.text.trim(),
-          'profileImageUrl': profileUrl ?? '', // MODIFIED: Save '' if null
-          'isConnected':false,
+          'profileImageUrl': profileUrl ?? '', // Save URL (or empty string)
+          'isConnected': false,
           'currentConnectionId': null,
           'emergencyContacts': [],
           'members': [],
@@ -326,7 +342,7 @@ class _RegisterPageState extends State<RegisterPage> {
             data['experienceBio'] = expBioController.text.trim();
             data['graduationOnNursing'] = gradNursingController.text.trim();
             data['graduationCertificateUrl'] =
-                certificateUrl ?? ''; // Set to '' if not uploaded or failed
+                certificateUrl ?? ''; // Save URL (or empty string)
           }
 
           // Existing caretaker fields
@@ -352,9 +368,14 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
+        // Handle specific Firebase/Auth exceptions if needed
+        String message = e.toString().contains('firebase_auth')
+            ? (e as FirebaseAuthException).message ?? e.toString()
+            : e.toString();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration failed: $message')),
+        );
       }
     } finally {
       setState(() => _loading = false);
@@ -508,7 +529,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 keyboardType: TextInputType.phone,
               ),
 
-              // Profile Image Upload (Now Optional)
+              // Profile Image Upload (Optional) - Uses 'care_taker_image' preset
               _buildFilePicker(
                 label: 'Profile Image (Optional)',
                 onTap: _pickProfileImage,
@@ -635,7 +656,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     'Nursing Qualification/Graduation',
                     Icons.school,
                   ),
-                  // Graduation Certificate Upload (Nurse Only - Optional)
+                  // Graduation Certificate Upload (Nurse Only - Optional) - Uses 'graduation' preset
                   _buildFilePicker(
                     label: 'Graduation Certificate (Image) (Optional)',
                     onTap: _pickCertificate,
