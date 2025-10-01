@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -263,29 +262,22 @@ class _RegisterPageState extends State<RegisterPage> {
           .get();
       if (snapUsername.docs.isNotEmpty) throw 'Username already exists';
 
-      // Check for existing phone number
       final snapPhone = await _firestore
           .collection(widget.role)
           .where('phoneNo', isEqualTo: phone)
           .get();
       if (snapPhone.docs.isNotEmpty) throw 'Phone number already exists';
 
-      // --- UPLOAD FILES TO CLOUDINARY ---
-      // 1. Profile Image Upload (Now Optional)
       profileUrl = await _uploadFile(
         _selectedProfileImagePath,
         'care_taker_profile',
       );
-      // No check for profileUrl == null here, as it's optional.
-
-      // 2. Certificate Upload (if nurse) (Optional)
       if (widget.role == 'caretaker' && _caregiverType == CaregiverType.nurse) {
         certificateUrl = await _uploadFile(
           _selectedCertificatePath,
           'graduation',
         );
       }
-      // ------------------------------------
 
       final credential = await _auth.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
@@ -301,7 +293,6 @@ class _RegisterPageState extends State<RegisterPage> {
           'email': emailController.text.trim(),
           'phoneNo': phone,
           'createdAt': Timestamp.now(),
-          // PERSONAL FIELDS
           'gender': _selectedGender.name,
           'dateOfBirth': Timestamp.fromDate(_selectedDOB!),
           'bio': bioController.text.trim(),
@@ -309,7 +300,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'city': cityController.text.trim(),
           'state': stateController.text.trim(),
           'profileImageUrl': profileUrl ?? '', // MODIFIED: Save '' if null
-
+          'isConnected':false,
           'currentConnectionId': null,
           'emergencyContacts': [],
           'members': [],
