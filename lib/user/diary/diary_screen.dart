@@ -40,6 +40,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
   Future<void> _loadDiaries() async {
     if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _hasError = false;
@@ -54,12 +55,15 @@ class _DiaryScreenState extends State<DiaryScreen> {
             .collection('diary')
             .orderBy('createdAt', descending: true)
             .get();
-        if (mounted) {
-          // Reverse to have oldest first, newest last
-          _diaries = snap.docs.reversed.toList();
+
+        if (!mounted) return;
+
+        setState(() {
+          _diaries = snap.docs.reversed.toList(); // oldest first
           _currentDate = DateTime.now();
           final todayStr = DateFormat('yyyy-MM-dd').format(_currentDate);
           _hasToday = _diaries.any((doc) => doc.id == todayStr);
+
           String todayContent = '';
           if (_hasToday) {
             final todayDoc = _diaries.firstWhere((doc) => doc.id == todayStr);
@@ -68,12 +72,15 @@ class _DiaryScreenState extends State<DiaryScreen> {
           _todayController.text = todayContent;
           _showedLimitToast = false;
           _isLoading = false;
-          // Jump to last page (newest)
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _pageController.jumpToPage(_diaries.length + (_hasToday ? 0 : 1) - 1);
-          });
-        }
-      } else if (mounted) {
+        });
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_pageController.hasClients) {
+            _pageController.jumpToPage(
+                _diaries.length + (_hasToday ? 0 : 1) - 1);
+          }
+        });
+      } else {
         setState(() {
           _isLoading = false;
           _hasError = true;
@@ -95,15 +102,18 @@ class _DiaryScreenState extends State<DiaryScreen> {
     if (uid == null) return;
 
     try {
-      await _firestore
+      final docRef = _firestore
           .collection('user')
           .doc(uid)
           .collection('diary')
-          .doc(dateStr)
-          .set({
+          .doc(dateStr);
+
+      final doc = await docRef.get();
+
+      await docRef.set({
         'content': content,
         'updatedAt': Timestamp.now(),
-        'createdAt': FieldValue.serverTimestamp(), // For new entries
+        if (!doc.exists) 'createdAt': Timestamp.now(), // only for new docs
       }, SetOptions(merge: true));
     } catch (e) {
       if (mounted) {
@@ -124,7 +134,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
           BoxShadow(
             color: Colors.black.withOpacity(0.2),
             blurRadius: 10,
-            offset: const Offset(5, 5), // Shadow for book page effect
+            offset: const Offset(5, 5),
           ),
         ],
         border: Border.all(color: Colors.grey.shade300),
@@ -135,7 +145,10 @@ class _DiaryScreenState extends State<DiaryScreen> {
         children: [
           Text(
             DateFormat('MMMM dd, yyyy').format(date),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -146,22 +159,30 @@ class _DiaryScreenState extends State<DiaryScreen> {
                     decoration: InputDecoration(
                       hintText: 'Write your diary here...',
                       border: InputBorder.none,
-                      counterText: '${_todayController.text.length}/$_charLimit',
-                      counterStyle: TextStyle(color: _todayController.text.length == _charLimit ? Colors.red : Colors.grey),
+                      counterText:
+                          '${_todayController.text.length}/$_charLimit',
+                      counterStyle: TextStyle(
+                          color: _todayController.text.length == _charLimit
+                              ? Colors.red
+                              : Colors.grey),
                     ),
                     onChanged: (text) {
                       _debounce?.cancel();
                       if (text.length > _charLimit) {
                         _todayController.text = text.substring(0, _charLimit);
-                        _todayController.selection = TextSelection.collapsed(offset: _charLimit);
+                        _todayController.selection = TextSelection.collapsed(
+                            offset: _charLimit);
                         if (!_showedLimitToast) {
-                          Fluttertoast.showToast(msg: 'Try to compress the content in the diary');
+                          Fluttertoast.showToast(
+                              msg:
+                                  'Try to compress the content in the diary');
                           _showedLimitToast = true;
                         }
                       } else {
                         if (text.length < _charLimit) _showedLimitToast = false;
                       }
-                      _debounce = Timer(const Duration(milliseconds: 500), () => _saveContent(dateStr, _todayController.text));
+                      _debounce = Timer(const Duration(milliseconds: 500),
+                          () => _saveContent(dateStr, _todayController.text));
                     },
                   )
                 : Text(
@@ -177,7 +198,9 @@ class _DiaryScreenState extends State<DiaryScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator(color: Colors.blueAccent)));
+      return const Scaffold(
+          body: Center(
+              child: CircularProgressIndicator(color: Colors.blueAccent)));
     }
 
     if (_hasError) {
@@ -188,7 +211,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
             children: [
               const Icon(Icons.error, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              const Text('Error loading diary', style: TextStyle(fontSize: 18, color: Colors.red)),
+              const Text('Error loading diary',
+                  style: TextStyle(fontSize: 18, color: Colors.red)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadDiaries,
@@ -232,9 +256,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
                   itemCount: itemCount,
                   itemBuilder: (context, index) {
                     if (index == itemCount - 1 && !_hasToday) {
-                      // Blank editable page for today (at the end)
                       return Transform(
-                        transform: Matrix4.identity()..setEntry(3, 2, 0.001), // Subtle 3D tilt for flip effect
+                        transform: Matrix4.identity()..setEntry(3, 2, 0.001),
                         child: _buildPage(_currentDate, '', editable: true),
                       );
                     }
@@ -243,14 +266,15 @@ class _DiaryScreenState extends State<DiaryScreen> {
                     final dateStr = doc.id;
                     final date = DateTime.parse(dateStr);
                     final content = doc['content'] as String? ?? '';
-                    final isToday = dateStr == DateFormat('yyyy-MM-dd').format(_currentDate);
+                    final isToday =
+                        dateStr == DateFormat('yyyy-MM-dd').format(_currentDate);
 
                     return Transform(
-                      transform: Matrix4.identity()..setEntry(3, 2, 0.001), // Subtle 3D tilt for flip effect
+                      transform: Matrix4.identity()..setEntry(3, 2, 0.001),
                       child: _buildPage(date, content, editable: isToday),
                     );
                   },
-                  physics: const BouncingScrollPhysics(), // For book-like bounce
+                  physics: const BouncingScrollPhysics(),
                 ),
               ),
       ),
