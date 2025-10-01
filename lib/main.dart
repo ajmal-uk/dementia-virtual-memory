@@ -14,13 +14,14 @@ import 'admin/admin_bottom_nav.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await dotenv.load(fileName: ".env");
   OneSignal.initialize(dotenv.env['ONE_SIGNAL_API_KEY']!);
   OneSignal.Notifications.requestPermission(true);
 
   final prefs = await SharedPreferences.getInstance();
   final user = FirebaseAuth.instance.currentUser;
   Widget initialScreen = const WelcomePage();
-  
+
   await dotenv.load();
   Gemini.init(apiKey: dotenv.env['GEMINI_API_KEY']!);
 
