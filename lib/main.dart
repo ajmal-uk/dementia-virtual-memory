@@ -14,15 +14,26 @@ import 'admin/admin_bottom_nav.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Load .env file once at the start
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    // This print statement is helpful for debugging missing .env files
+    print("Error loading .env file: $e");
+  }
+
+  // Initialize OneSignal
+  // Note: Using the null-check operator (!) because the value is expected to be present
   OneSignal.initialize(dotenv.env['ONE_SIGNAL_API_KEY']!);
   OneSignal.Notifications.requestPermission(true);
+
+  // Initialize Gemini
+  Gemini.init(apiKey: dotenv.env['GEMINI_API_KEY']!);
 
   final prefs = await SharedPreferences.getInstance();
   final user = FirebaseAuth.instance.currentUser;
   Widget initialScreen = const WelcomePage();
-  
-  await dotenv.load();
-  Gemini.init(apiKey: dotenv.env['GEMINI_API_KEY']!);
 
   if (user != null) {
     final role = prefs.getString('lastRole') ?? 'user';
