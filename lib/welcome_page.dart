@@ -1,3 +1,4 @@
+// lib/welcome_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'login_page.dart';

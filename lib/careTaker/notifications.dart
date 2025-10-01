@@ -1,9 +1,11 @@
+// lib/careTaker/notifications.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
+
+import '../utils/notification_helper.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -19,13 +21,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    // Mark all notifications as read when the screen loads
     _markAllAsRead();
   }
 
   // --- Utility Functions ---
 
-  Future<String> _fetchSenderName(String userUid) async {
+  Future<String> _fetchUserName(String userUid) async {
     try {
       final doc = await _firestore.collection('user').doc(userUid).get();
       return doc.data()?['fullName'] as String? ?? 'User Not Found';
@@ -90,32 +91,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  // UPDATED: Confirmed logic aligns with all user requirements
-  Future<void> _handleAccept(String notificationId, String patientUid) async {
+  Future<void> _handleAccept(String notificationId, String userUid, String connectionId) async {
     final caretakerUid = _auth.currentUser?.uid;
     if (caretakerUid == null) return;
 
     try {
-      // 1. Update Caretaker's profile (CARETAKER points to PATIENT)
+      // Update connection status
+      await _firestore.collection('connections').doc(connectionId).update({
+        'status': 'accepted',
+        'confirmedBy': caretakerUid,
+      });
+
+      // Update Caretaker's profile
       await _firestore.collection('caretaker').doc(caretakerUid).update({
-        'isConnected': true, // Set our current user's isConnected to true (✅)
-        'currentConnectionId':
-            patientUid, // Set currentConnectionId to 'from' value (patient UID) (✅)
-      });
-
-      // 2. Update Patient's profile (PATIENT points back to CARETAKER)
-      await _firestore.collection('user').doc(patientUid).update({
         'isConnected': true,
-        'currentConnectionId': caretakerUid,
+        'currentConnectionId': connectionId,
       });
 
-      // 3. Delete the notification to clean up the list
+      // Update User's profile
+      await _firestore.collection('user').doc(userUid).update({
+        'isConnected': true,
+        'currentConnectionId': connectionId,
+      });
+
+      // Delete the notification
       await _firestore
           .collection('caretaker')
           .doc(caretakerUid)
           .collection('notifications')
           .doc(notificationId)
           .delete();
+
+      // Notify user
+      final userDoc = await _firestore.collection('user').doc(userUid).get();
+      final playerIds = List<String>.from(userDoc.data()?['playerIds'] ?? []);
+      await sendNotification(playerIds, 'Your connection request has been accepted!');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -131,19 +141,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  // UPDATED: Confirmed logic aligns with all user requirements
-  Future<void> _handleDecline(String notificationId) async {
+  Future<void> _handleDecline(String notificationId, String userUid, String connectionId) async {
     final caretakerUid = _auth.currentUser?.uid;
     if (caretakerUid == null) return;
 
     try {
-      // Delete the document in the notifications subcollection (✅)
+      // Update connection status to rejected
+      await _firestore.collection('connections').doc(connectionId).update({
+        'status': 'rejected',
+      });
+
+      // Delete the notification
       await _firestore
           .collection('caretaker')
           .doc(caretakerUid)
           .collection('notifications')
           .doc(notificationId)
           .delete();
+
+      // Notify user
+      final userDoc = await _firestore.collection('user').doc(userUid).get();
+      final playerIds = List<String>.from(userDoc.data()?['playerIds'] ?? []);
+      await sendNotification(playerIds, 'Your connection request was declined');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,6 +173,81 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to decline connection: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleUnbindAccept(String notificationId, String userUid, String connectionId) async {
+    final caretakerUid = _auth.currentUser?.uid;
+    if (caretakerUid == null) return;
+
+    try {
+      await _firestore.collection('connections').doc(connectionId).update({
+        'status': 'unbound',
+      });
+
+      // Update both profiles
+      await _firestore.collection('caretaker').doc(caretakerUid).update({
+        'isConnected': false,
+        'currentConnectionId': null,
+      });
+
+      await _firestore.collection('user').doc(userUid).update({
+        'isConnected': false,
+        'currentConnectionId': null,
+      });
+
+      // Delete the notification
+      await _firestore
+          .collection('caretaker')
+          .doc(caretakerUid)
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Connection unbound successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to unbind connection: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleUnbindDecline(String notificationId, String connectionId) async {
+    final caretakerUid = _auth.currentUser?.uid;
+    if (caretakerUid == null) return;
+
+    try {
+      // Revert unbind request
+      await _firestore.collection('connections').doc(connectionId).update({
+        'status': 'accepted',
+        'requestedBy': null,
+      });
+
+      // Delete the notification
+      await _firestore
+          .collection('caretaker')
+          .doc(caretakerUid)
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unbind request declined')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to decline unbind: $e')),
         );
       }
     }
@@ -179,6 +273,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final isRead = data['isRead'] as bool? ?? false;
     final senderUid = data['from'] as String?;
     final notificationMessage = data['message'] as String? ?? 'No message.';
+    final connectionId = data['connectionId'] as String?;
 
     TextStyle textStyle = const TextStyle(fontWeight: FontWeight.normal);
     Color cardColor = Colors.white;
@@ -191,6 +286,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
       cardColor = Colors.blue.shade50;
       icon = Icons.person_add;
+    } else if (type == 'unbind_request') {
+      textStyle = const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: Colors.orange,
+      );
+      cardColor = Colors.orange.shade50;
+      icon = Icons.link_off;
     } else if (!isRead) {
       cardColor = Colors.yellow.shade100;
     }
@@ -209,20 +311,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               leading: Icon(icon, color: Colors.blueAccent),
               title: (type == 'connection_request' && senderUid != null)
                   ? FutureBuilder<String>(
-                      future: _fetchSenderName(senderUid),
+                      future: _fetchUserName(senderUid),
                       builder: (context, snapshot) {
-                        String senderName =
-                            snapshot.data ?? 'Loading Sender...';
-
-                        // Use the fetched name in the message
-                        String displayMessage =
-                            'Connection request from ${senderName}.';
-
+                        String userName = snapshot.data ?? 'Loading User...';
+                        String displayMessage = 'Connection request from $userName.';
                         return Text(displayMessage, style: textStyle);
                       },
                     )
-                  : Text(notificationMessage, style: textStyle),
-
+                  : (type == 'unbind_request' && senderUid != null)
+                      ? FutureBuilder<String>(
+                          future: _fetchUserName(senderUid),
+                          builder: (context, snapshot) {
+                            String userName = snapshot.data ?? 'Loading User...';
+                            String displayMessage = 'Unbind request from $userName.';
+                            return Text(displayMessage, style: textStyle);
+                          },
+                        )
+                      : Text(notificationMessage, style: textStyle),
               subtitle: Text(
                 'Received: ${DateFormat('MMM dd, hh:mm a').format((data['createdAt'] as Timestamp).toDate())}',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -230,72 +335,91 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               contentPadding: EdgeInsets.zero,
             ),
 
-            if (type == 'connection_request' && senderUid != null)
-              // Action Buttons (Overflow Fix Applied)
+            if ((type == 'connection_request' || type == 'unbind_request') && senderUid != null && connectionId != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Expanded(
-                      flex: 1,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(
-                          Icons.phone,
-                          size: 18,
-                          color: Colors.green,
-                        ),
-                        label: const Text(
-                          'Call',
-                          style: TextStyle(fontSize: 13, color: Colors.green),
-                        ),
-                        onPressed: () => _handleCall(senderUid),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 0),
-                          side: const BorderSide(color: Colors.green),
+                    if (type == 'connection_request') ...[
+                      Expanded(
+                        flex: 1,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.phone, size: 18, color: Colors.green),
+                          label: const Text('Call', style: TextStyle(fontSize: 13, color: Colors.green)),
+                          onPressed: () => _handleCall(senderUid),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                            side: const BorderSide(color: Colors.green),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(
-                          Icons.check,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          'Accept',
-                          style: TextStyle(fontSize: 13, color: Colors.white),
-                        ),
-                        onPressed: () => _handleAccept(doc.id, senderUid),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          padding: const EdgeInsets.symmetric(horizontal: 0),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.check, size: 18, color: Colors.white),
+                          label: const Text('Accept', style: TextStyle(fontSize: 13, color: Colors.white)),
+                          onPressed: () => _handleAccept(doc.id, senderUid, connectionId),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          'Decline',
-                          style: TextStyle(fontSize: 13, color: Colors.white),
-                        ),
-                        onPressed: () => _handleDecline(doc.id),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          padding: const EdgeInsets.symmetric(horizontal: 0),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.close, size: 18, color: Colors.white),
+                          label: const Text('Decline', style: TextStyle(fontSize: 13, color: Colors.white)),
+                          onPressed: () => _handleDecline(doc.id, senderUid, connectionId),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                          ),
                         ),
                       ),
-                    ),
+                    ] else if (type == 'unbind_request') ...[
+                      Expanded(
+                        flex: 1,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.phone, size: 18, color: Colors.green),
+                          label: const Text('Call', style: TextStyle(fontSize: 13, color: Colors.green)),
+                          onPressed: () => _handleCall(senderUid),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                            side: const BorderSide(color: Colors.green),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.check, size: 18, color: Colors.white),
+                          label: const Text('Accept', style: TextStyle(fontSize: 13, color: Colors.white)),
+                          onPressed: () => _handleUnbindAccept(doc.id, senderUid, connectionId),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.close, size: 18, color: Colors.white),
+                          label: const Text('Decline', style: TextStyle(fontSize: 13, color: Colors.white)),
+                          onPressed: () => _handleUnbindDecline(doc.id, connectionId),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

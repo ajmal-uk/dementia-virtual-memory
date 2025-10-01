@@ -1,15 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Correctly import the WelcomePage widget
-// ignore: depend_on_referenced_packages
-import '../../welcome_page.dart'; // Assuming this path correctly points to the WelcomePage file
-
-// Import the WelcomePage widget class
-// NOTE: We rely on the path in the previous code block, but we must
-// define the class name for the navigation call.
-// We'll assume the class name in that file is 'WelcomePage'.
-// Replace this import with the actual one if 'welcome_page.dart' contains a different class name.
+import '../../welcome_page.dart';
 
 
 class Profile extends StatefulWidget {

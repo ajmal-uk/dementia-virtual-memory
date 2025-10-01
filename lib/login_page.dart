@@ -1,4 +1,5 @@
 // lib/login_page.dart
+// lib/login_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -104,9 +105,7 @@ class _LoginPageState extends State<LoginPage> {
           await _auth.signOut(); // Sign out the Firebase user
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Login failed: Invalid role for this account.'),
-              ),
+              const SnackBar(content: Text('Login failed: Invalid role for this account.')),
             );
           }
         }
@@ -145,7 +144,6 @@ class _LoginPageState extends State<LoginPage> {
           true, // Ensure content resizes when keyboard appears
       body: Container(
         decoration: BoxDecoration(
-          // Corrected use of withValues
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,

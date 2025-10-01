@@ -1,3 +1,4 @@
+// lib/user/family/family_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -45,11 +46,10 @@ class _FamilyScreenState extends State<FamilyScreen> {
   }
 
   Future<void> _callNumber(String number) async {
-    final context = this.context; // Capture context
     final uri = Uri(scheme: 'tel', path: number);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
-    } else if (context.mounted) {
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not launch dialer for $number')),
       );
@@ -259,8 +259,9 @@ class _FamilyScreenState extends State<FamilyScreen> {
                                                         style: ElevatedButton.styleFrom(
                                                             backgroundColor: Colors.red),
                                                         onPressed: () => Navigator.pop(context, true),
-                                                        child: const Text('Delete',
-                                                            style: TextStyle(color: Colors.white)),
+                                                        child: const Text(
+                                                          'Delete',
+                                                          style: TextStyle(color: Colors.white)),
                                                       ),
                                                     ],
                                                   ),

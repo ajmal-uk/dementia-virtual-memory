@@ -1,4 +1,5 @@
 // lib/user/profile/edit_profile_screen.dart
+// lib/user/profile/edit_profile_screen.dart
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -145,7 +146,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               children: [
                 TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name')),
                 TextField(controller: relationController, decoration: const InputDecoration(labelText: 'Relation')),
-                TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Phone'), keyboardType: TextInputType.phone),
+                TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Phone')),
               ],
             ),
           ),
@@ -259,7 +260,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: Colors.white,
-                  prefixIcon: const Icon(Icons.transgender, color: Colors.blueAccent),
                 ),
                 items: ['Male', 'Female', 'Other'].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                 onChanged: (value) => setState(() => _gender = value),

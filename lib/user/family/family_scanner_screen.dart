@@ -1,3 +1,4 @@
+// lib/user/family/family_scanner_screen.dart
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -9,6 +10,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
 import 'package:logger/logger.dart';
 import 'package:image/image.dart' as img;
+import 'package:permission_handler/permission_handler.dart';
 
 final logger = Logger();
 
@@ -61,6 +63,29 @@ class _ScannerScreenState extends State<ScannerScreen>
       _noMatch = false;
       _capturedImage = null;
     });
+
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Camera permission is permanently denied. Please enable it in settings.')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Camera permission denied.')),
+          );
+        }
+      }
+      setState(() {
+        _hasCameraError = true;
+        _isLoadingCamera = false;
+      });
+      return;
+    }
+
     try {
       await _controller?.dispose();
       _cameras = await availableCameras().timeout(
@@ -499,8 +524,14 @@ class _ScannerScreenState extends State<ScannerScreen>
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: _initializeCamera,
-            child: const Text('Retry'),
+            onPressed: () async {
+              if (await Permission.camera.isPermanentlyDenied) {
+                openAppSettings();
+              } else {
+                _initializeCamera();
+              }
+            },
+            child: const Text('Retry / Settings'),
           ),
         ],
       ),

@@ -76,18 +76,8 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
               if (mounted) {
                 setState(() {
                   _unbindStatus = (requestedBy == uid) ? 'pending' : 'requested';
-                  if (_unbindStatus == 'pending') {
-                    _connectedCaretaker = null;
-                    _isConnected = false;
-                  }
                   _isLoading = false;
                 });
-                if (_unbindStatus == 'pending') {
-                  await _firestore.collection('user').doc(uid).update({
-                    'isConnected': false,
-                    'currentConnectionId': null,
-                  });
-                }
               }
               return;
             } else if (status == 'unbound') {
@@ -199,7 +189,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
           return;
         }
 
-        await _firestore.collection('connections').add({
+        final ref = await _firestore.collection('connections').add({
           'user_uid': uid,
           'caretaker_uid': caretakerUid,
           'status': 'pending',
@@ -218,7 +208,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
         );
         await sendNotification(playerIds, 'New connection request from user');
 
-        // Add to notifications subcollection
+        // Add to notifications subcollection with connectionId
         await _firestore
             .collection('caretaker')
             .doc(caretakerUid)
@@ -230,6 +220,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
               'to': caretakerUid,
               'createdAt': Timestamp.now(),
               'isRead': false,
+              'connectionId': ref.id,  // ADDED
             });
 
         if (mounted) {
@@ -285,6 +276,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
                 'to': caretakerUid,
                 'createdAt': Timestamp.now(),
                 'isRead': false,
+                'connectionId': _currentConnectionId,  // ADDED
               });
         }
 

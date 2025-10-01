@@ -1,3 +1,4 @@
+// lib/user/home/home_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -130,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (uid == null) return Stream.empty();
 
     final coll = _firestore.collection('user').doc(uid).collection('to_dos');
+
     final todayStart = Timestamp.fromDate(
         DateTime.now().subtract(const Duration(days: 1)).add(const Duration(hours: 24)));
     final todayEnd = Timestamp.fromDate(DateTime.now().add(const Duration(days: 1)));
@@ -140,7 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
           .doc(uid)
           .collection('recurring_tasks')
           .orderBy('createdAt', descending: true)
-          .limit(50)
           .snapshots();
     } else if (_selectedTab == 'Today') {
       return coll
