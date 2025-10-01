@@ -1,31 +1,44 @@
-// lib/careTaker/user_detail_screen.dart
+// lib/user/caretaker/caretaker_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class UserDetailScreen extends StatelessWidget {
-  final String userUid;
-  final Map<String, dynamic> userData;
-  final VoidCallback? onAccept;
-  final VoidCallback? onReject;
-  final VoidCallback? onConfirmUnbind;
+class CaretakerDetailScreen extends StatelessWidget {
+  final String caretakerUid;
+  final Map<String, dynamic> caretakerData;
+  final VoidCallback onConnect;
 
-  const UserDetailScreen({
+  const CaretakerDetailScreen({
     super.key,
-    required this.userUid,
-    required this.userData,
-    this.onAccept,
-    this.onReject,
-    this.onConfirmUnbind,
+    required this.caretakerUid,
+    required this.caretakerData,
+    required this.onConnect,
   });
+
+  Widget _buildNurseBadge() {
+    return Positioned(
+      top: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: const BoxDecoration(
+          color: Colors.blue,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.local_hospital,
+          size: 16,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isConnectionRequest = onAccept != null && onReject != null;
-    final isUnbindRequest = onConfirmUnbind != null;
-
+    final isNurse = caretakerData['caregiverType'] == 'nurse';
     return Scaffold(
       appBar: AppBar(
-        title: Text(userData['fullName'] ?? 'User'),
+        title: Text(caretakerData['fullName'] ?? 'Caretaker'),
         backgroundColor: Colors.blueAccent,
         elevation: 0,
       ),
@@ -34,7 +47,7 @@ class UserDetailScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blueAccent.withOpacity(0.1), Colors.white],
+            colors: [Colors.blueAccent.withValues(alpha: 0.1), Colors.white],
           ),
         ),
         child: SingleChildScrollView(
@@ -43,13 +56,18 @@ class UserDetailScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.grey[300],
-                  backgroundImage: NetworkImage(
-                    userData['profileImageUrl'] ?? '',
-                  ),
-                  child: const Icon(Icons.person, size: 60, color: Colors.blueAccent),
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Colors.grey[300],
+                      backgroundImage: NetworkImage(
+                        caretakerData['profileImageUrl'] ?? '',
+                      ),
+                      child: const Icon(Icons.person, size: 60, color: Colors.blueAccent),
+                    ),
+                    if (isNurse) _buildNurseBadge(),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -57,11 +75,11 @@ class UserDetailScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      userData['fullName'] ?? 'Unnamed',
+                      caretakerData['fullName'] ?? 'Unnamed',
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
                     ),
                     Text(
-                      '@${userData['username'] ?? ''}',
+                      '@${caretakerData['username'] ?? ''}',
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   ],
@@ -76,9 +94,17 @@ class UserDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInfoRow(Icons.info_outline, 'Bio', userData['bio'] ?? ''),
-                      _buildInfoRow(Icons.location_city, 'City', userData['city'] ?? ''),
-                      _buildInfoRow(Icons.phone, 'Phone', userData['phoneNo'] ?? ''),
+                      _buildInfoRow(Icons.info_outline, 'Bio', caretakerData['bio'] ?? ''),
+                      _buildInfoRow(Icons.location_city, 'City', caretakerData['city'] ?? ''),
+                      _buildInfoRow(Icons.phone, 'Phone', caretakerData['phoneNo'] ?? ''),
+                      if (isNurse) ...[
+                        _buildInfoRow(Icons.work_history, 'Experience Years', '${caretakerData['experienceYears'] ?? 0} years'),
+                        _buildInfoRow(Icons.description, 'Experience Bio', caretakerData['experienceBio'] ?? ''),
+                        _buildInfoRow(Icons.school, 'Nursing Qualification', caretakerData['graduationOnNursing'] ?? ''),
+                        if (caretakerData['graduationCertificateUrl']?.isNotEmpty ?? false)
+                          _buildInfoRow(Icons.picture_as_pdf, 'Certificate', 'View Certificate'),
+                      ] else
+                        _buildInfoRow(Icons.family_restroom, 'Relation', caretakerData['relation'] ?? ''),
                     ],
                   ),
                 ),
@@ -89,12 +115,13 @@ class UserDetailScreen extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        final phone = userData['phoneNo'];
+                        final phone = caretakerData['phoneNo'];
                         if (phone != null && phone.isNotEmpty) {
                           final url = Uri.parse('tel:$phone');
-                          if (await canLaunchUrl(url)) {
+                          final can = await canLaunchUrl(url);
+                          if (can) {
                             await launchUrl(url);
-                          } else {
+                          } else if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Could not launch phone app')),
                             );
@@ -106,37 +133,15 @@ class UserDetailScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                     ),
                   ),
-                  if (isConnectionRequest) ...[
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onAccept,
-                        icon: const Icon(Icons.check, color: Colors.white),
-                        label: const Text('Accept', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-                      ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: onConnect,
+                      icon: const Icon(Icons.link, color: Colors.white),
+                      label: const Text('Connect', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onReject,
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        label: const Text('Reject', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      ),
-                    ),
-                  ],
-                  if (isUnbindRequest) ...[
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onConfirmUnbind,
-                        icon: const Icon(Icons.link_off, color: Colors.white),
-                        label: const Text('Confirm Unbind', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      ),
-                    ),
-                  ],
+                  ),
                 ],
               ),
             ],
