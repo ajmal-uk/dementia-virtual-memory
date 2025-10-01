@@ -3,6 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+// Assuming the file containing the logic to fetch members by patientUid is imported here
+import 'family_scanner.dart'; // Import the correct ScannerScreen
+
+// DUMMY SCREEN FOR NAVIGATION - MODIFIED TO REFLECT THE NEW SIGNATURE
+// NOTE: Remove this placeholder if you have the real family_scanner_screen.dart imported.
+// If you are keeping it here, ensure the real logic is in family_scanner_screen.dart
+
 
 class User extends StatefulWidget {
   const User({super.key});
@@ -46,6 +53,7 @@ class _UserState extends State<User> {
           .get();
       final data = caretakerDoc.data();
 
+      // Check for isConnected and currentConnectionId
       final isConnectedField = data?['isConnected'] as bool? ?? false;
       final patientUid = data?['currentConnectionId'] as String?;
 
@@ -71,6 +79,7 @@ class _UserState extends State<User> {
 
       if (mounted) {
         setState(() {
+          _patientUid = null; // Ensure patient UID is null if not connected
           _isConnected = false;
           _isLoading = false;
         });
@@ -81,6 +90,7 @@ class _UserState extends State<User> {
           SnackBar(content: Text('Error checking connection: $e')),
         );
         setState(() {
+          _patientUid = null;
           _isConnected = false;
           _isLoading = false;
         });
@@ -103,13 +113,14 @@ class _UserState extends State<User> {
     final todayStart = Timestamp.fromDate(todayMidnight);
     final todayEnd = Timestamp.fromDate(tomorrowMidnight);
 
+    // FIX: Using correct path for recurring tasks
+    final recurringColl = _firestore
+        .collection('user')
+        .doc(_patientUid)
+        .collection('recurring_tasks');
+
     if (_selectedTab == 'Recurring') {
-      return _firestore
-          .collection('user')
-          .doc(_patientUid)
-          .collection('recurring_tasks')
-          .orderBy('createdAt', descending: true)
-          .snapshots();
+      return recurringColl.orderBy('createdAt', descending: true).snapshots();
     } else if (_selectedTab == 'Today') {
       return coll
           .where('dueDate', isGreaterThanOrEqualTo: todayStart)
@@ -305,6 +316,23 @@ class _UserState extends State<User> {
     );
   }
 
+  // --- Face Scanner Navigation Handler (UPDATED) ---
+  void _openFaceScanner() {
+    // Only navigate if connected and patientUid is known
+    if (_isConnected && _patientUid != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          // Pass the patientUid to the ScannerScreen
+          builder: (context) => ScannerScreen(patientUid: _patientUid!),
+        ),
+      );
+    } else {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot open scanner: Not connected to a patient.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -329,6 +357,9 @@ class _UserState extends State<User> {
       );
     }
 
+    // Only show the FloatingActionButton if _isConnected is true and we have a patient UID
+    final showScannerButton = _isConnected && _patientUid != null;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Patient: ${_patientName ?? 'N/A'}'),
@@ -339,6 +370,17 @@ class _UserState extends State<User> {
           // Add/Edit buttons removed for read-only view
         ],
       ),
+      // FLOATING ACTION BUTTON IMPLEMENTATION: Conditional on connection status
+      floatingActionButton: showScannerButton
+          ? FloatingActionButton.extended(
+              onPressed: _openFaceScanner,
+              label: const Text('Face Scan', style: TextStyle(color: Colors.white)),
+              icon: const Icon(Icons.face_unlock_outlined, color: Colors.white),
+              backgroundColor: Colors.indigo,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 6,
+            )
+          : null, // Don't show the button if not connected
       body: Column(
         children: [
           _buildPatientDetails(),
