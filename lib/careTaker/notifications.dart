@@ -1,168 +1,347 @@
-// lib/careTaker/user_detail_screen.dart
+// lib/careTaker/notifications.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:logger/logger.dart';
+import '../utils/notification_helper.dart';
+import 'user_detail_screen.dart';  // Assume this file is created as per the additional code below
 
-class UserDetailScreen extends StatelessWidget {
-  final String userUid;
-  final Map<String, dynamic> userData;
-  final VoidCallback? onAccept;
-  final VoidCallback? onReject;
-  final VoidCallback? onConfirmUnbind;
+final logger = Logger();
 
-  const UserDetailScreen({
-    super.key,
-    required this.userUid,
-    required this.userData,
-    this.onAccept,
-    this.onReject,
-    this.onConfirmUnbind,
-  });
+class Notifications extends StatefulWidget {
+  const Notifications({super.key});
+
+  @override
+  State<Notifications> createState() => _NotificationsState();
+}
+
+class _NotificationsState extends State<Notifications> {
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+
+  Stream<QuerySnapshot> _getNotificationsStream() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.empty();
+    return _firestore
+        .collection('caretaker')
+        .doc(uid)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  Future<void> _markAsRead(String notifId) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid != null) {
+      await _firestore
+          .collection('caretaker')
+          .doc(uid)
+          .collection('notifications')
+          .doc(notifId)
+          .update({'isRead': true});
+    }
+  }
+
+  Future<Map<String, dynamic>?> _fetchUserData(String userUid) async {
+    try {
+      final doc = await _firestore.collection('user').doc(userUid).get();
+      if (doc.exists) {
+        return doc.data();
+      }
+      return null;
+    } catch (e) {
+      logger.e('Error fetching user data: $e');
+      return null;
+    }
+  }
+
+  Future<void> _acceptConnection(String connectionId, String userUid, String caretakerUid) async {
+    try {
+      await _firestore.collection('connections').doc(connectionId).update({
+        'status': 'accepted',
+        'confirmedBy': caretakerUid,
+      });
+
+      await _firestore.collection('caretaker').doc(caretakerUid).update({
+        'isConnected': true,
+        'currentConnectionId': connectionId,
+      });
+
+      await _firestore.collection('user').doc(userUid).update({
+        'isConnected': true,
+        'currentConnectionId': connectionId,
+      });
+
+      // Notify user
+      final userDoc = await _firestore.collection('user').doc(userUid).get();
+      final playerIds = List<String>.from(userDoc.data()?['playerIds'] ?? []);
+      await sendNotification(playerIds, 'Your connection request has been accepted');
+
+      await _firestore
+          .collection('user')
+          .doc(userUid)
+          .collection('notifications')
+          .add({
+            'type': 'connection_accepted',
+            'message': 'Connection request accepted by caretaker',
+            'from': caretakerUid,
+            'to': userUid,
+            'createdAt': Timestamp.now(),
+            'isRead': false,
+          });
+
+      // Reject other pending connections and remove their notifications
+      final otherConnections = await _firestore
+          .collection('connections')
+          .where('caretaker_uid', isEqualTo: caretakerUid)
+          .where('status', isEqualTo: 'pending')
+          .where(FieldPath.documentId, isNotEqualTo: connectionId)
+          .get();
+
+      for (var connDoc in otherConnections.docs) {
+        final otherUserUid = connDoc.data()['user_uid'];
+        await connDoc.reference.update({'status': 'rejected'});
+
+        // Notify the rejected user
+        final otherUserDoc = await _firestore.collection('user').doc(otherUserUid).get();
+        final otherPlayerIds = List<String>.from(otherUserDoc.data()?['playerIds'] ?? []);
+        await sendNotification(otherPlayerIds, 'Your connection request has been rejected');
+
+        await _firestore
+            .collection('user')
+            .doc(otherUserUid)
+            .collection('notifications')
+            .add({
+              'type': 'connection_rejected',
+              'message': 'Connection request rejected by caretaker',
+              'from': caretakerUid,
+              'to': otherUserUid,
+              'createdAt': Timestamp.now(),
+              'isRead': false,
+            });
+
+        // Remove the notification from caretaker's side
+        final notifQuery = await _firestore
+            .collection('caretaker')
+            .doc(caretakerUid)
+            .collection('notifications')
+            .where('type', isEqualTo: 'connection_request')
+            .where('from', isEqualTo: otherUserUid)
+            .get();
+        for (var notifDoc in notifQuery.docs) {
+          await notifDoc.reference.delete();
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection accepted')));
+      }
+    } catch (e) {
+      logger.e('Error accepting connection: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _rejectConnection(String connectionId, String userUid, String caretakerUid) async {
+    try {
+      await _firestore.collection('connections').doc(connectionId).update({
+        'status': 'rejected',
+      });
+
+      // Notify user
+      final userDoc = await _firestore.collection('user').doc(userUid).get();
+      final playerIds = List<String>.from(userDoc.data()?['playerIds'] ?? []);
+      await sendNotification(playerIds, 'Your connection request has been rejected');
+
+      await _firestore
+          .collection('user')
+          .doc(userUid)
+          .collection('notifications')
+          .add({
+            'type': 'connection_rejected',
+            'message': 'Connection request rejected by caretaker',
+            'from': caretakerUid,
+            'to': userUid,
+            'createdAt': Timestamp.now(),
+            'isRead': false,
+          });
+
+      // Remove the notification from caretaker's side
+      final notifQuery = await _firestore
+          .collection('caretaker')
+          .doc(caretakerUid)
+          .collection('notifications')
+          .where('type', isEqualTo: 'connection_request')
+          .where('from', isEqualTo: userUid)
+          .get();
+      for (var notifDoc in notifQuery.docs) {
+        await notifDoc.reference.delete();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection rejected')));
+      }
+    } catch (e) {
+      logger.e('Error rejecting connection: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _confirmUnbind(String connectionId, String userUid, String caretakerUid) async {
+    try {
+      await _firestore.collection('connections').doc(connectionId).update({
+        'status': 'unbound',
+      });
+
+      await _firestore.collection('caretaker').doc(caretakerUid).update({
+        'isConnected': false,
+        'currentConnectionId': null,
+      });
+
+      await _firestore.collection('user').doc(userUid).update({
+        'isConnected': false,
+        'currentConnectionId': null,
+      });
+
+      // Notify user
+      final userDoc = await _firestore.collection('user').doc(userUid).get();
+      final playerIds = List<String>.from(userDoc.data()?['playerIds'] ?? []);
+      await sendNotification(playerIds, 'Unbind confirmed');
+
+      await _firestore
+          .collection('user')
+          .doc(userUid)
+          .collection('notifications')
+          .add({
+            'type': 'unbind_confirmed',
+            'message': 'Unbind confirmed by caretaker',
+            'from': caretakerUid,
+            'to': userUid,
+            'createdAt': Timestamp.now(),
+            'isRead': false,
+          });
+
+      // Remove the unbind notification from caretaker's side
+      final notifQuery = await _firestore
+          .collection('caretaker')
+          .doc(caretakerUid)
+          .collection('notifications')
+          .where('type', isEqualTo: 'unbind_request')
+          .where('from', isEqualTo: userUid)
+          .get();
+      for (var notifDoc in notifQuery.docs) {
+        await notifDoc.reference.delete();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unbound successfully')));
+      }
+    } catch (e) {
+      logger.e('Error confirming unbind: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isConnectionRequest = onAccept != null && onReject != null;
-    final isUnbindRequest = onConfirmUnbind != null;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(userData['fullName'] ?? 'User'),
+        title: const Text('Notifications / Requests'),
         backgroundColor: Colors.blueAccent,
         elevation: 0,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blueAccent.withOpacity(0.1), Colors.white],
-          ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.grey[300],
-                  backgroundImage: NetworkImage(
-                    userData['profileImageUrl'] ?? '',
-                  ),
-                  child: const Icon(Icons.person, size: 60, color: Colors.blueAccent),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      userData['fullName'] ?? 'Unnamed',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-                    ),
-                    Text(
-                      '@${userData['username'] ?? ''}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildInfoRow(Icons.info_outline, 'Bio', userData['bio'] ?? ''),
-                      _buildInfoRow(Icons.location_city, 'City', userData['city'] ?? ''),
-                      _buildInfoRow(Icons.phone, 'Phone', userData['phoneNo'] ?? ''),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final phone = userData['phoneNo'];
-                        if (phone != null && phone.isNotEmpty) {
-                          final url = Uri.parse('tel:$phone');
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Could not launch phone app')),
-                            );
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _getNotificationsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final notifs = snapshot.data?.docs ?? [];
+          if (notifs.isEmpty) {
+            return const Center(child: Text('No notifications'));
+          }
+          return ListView.builder(
+            itemCount: notifs.length,
+            itemBuilder: (context, index) {
+              final notif = notifs[index].data() as Map<String, dynamic>;
+              final notifId = notifs[index].id;
+              final type = notif['type'] as String?;
+              final fromUid = notif['from'] as String?;
+              final isRead = notif['isRead'] as bool? ?? false;
+
+              return FutureBuilder<Map<String, dynamic>?>(
+                future: fromUid != null ? _fetchUserData(fromUid) : Future.value(null),
+                builder: (context, userSnap) {
+                  if (userSnap.connectionState == ConnectionState.waiting) {
+                    return const ListTile(title: Text('Loading...'));
+                  }
+                  final userData = userSnap.data;
+                  final userName = userData?['fullName'] ?? 'Unknown User';
+
+                  return ListTile(
+                    leading: const Icon(Icons.notification_important),
+                    title: Text(type == 'connection_request' 
+                        ? 'Connection Request from $userName'
+                        : type == 'unbind_request'
+                            ? 'Unbind Request from $userName'
+                            : notif['message'] ?? 'Notification'),
+                    trailing: isRead ? null : const Icon(Icons.new_releases),
+                    onTap: () async {
+                      await _markAsRead(notifId);
+                      if (fromUid != null && userData != null) {
+                        final uid = _auth.currentUser?.uid;
+                        if (uid != null) {
+                          final connections = await _firestore
+                              .collection('connections')
+                              .where('caretaker_uid', isEqualTo: uid)
+                              .where('user_uid', isEqualTo: fromUid)
+                              .get();
+                          final connectionDoc = connections.docs.firstOrNull;
+                          if (connectionDoc != null) {
+                            final connectionId = connectionDoc.id;
+                            if (type == 'connection_request') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => UserDetailScreen(
+                                    userUid: fromUid,
+                                    userData: userData,
+                                    onAccept: () => _acceptConnection(connectionId, fromUid, uid),
+                                    onReject: () => _rejectConnection(connectionId, fromUid, uid),
+                                  ),
+                                ),
+                              );
+                            } else if (type == 'unbind_request') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => UserDetailScreen(
+                                    userUid: fromUid,
+                                    userData: userData,
+                                    onConfirmUnbind: () => _confirmUnbind(connectionId, fromUid, uid),
+                                  ),
+                                ),
+                              );
+                            }
                           }
                         }
-                      },
-                      icon: const Icon(Icons.phone, color: Colors.white),
-                      label: const Text('Call', style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                    ),
-                  ),
-                  if (isConnectionRequest) ...[
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onAccept,
-                        icon: const Icon(Icons.check, color: Colors.white),
-                        label: const Text('Accept', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onReject,
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        label: const Text('Reject', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      ),
-                    ),
-                  ],
-                  if (isUnbindRequest) ...[
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onConfirmUnbind,
-                        icon: const Icon(Icons.link_off, color: Colors.white),
-                        label: const Text('Confirm Unbind', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blueAccent),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(value),
-              ],
-            ),
-          ),
-        ],
+                      }
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
     );
   }
