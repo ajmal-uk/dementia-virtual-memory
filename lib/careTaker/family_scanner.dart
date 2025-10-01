@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,12 +8,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:confetti/confetti.dart';
 import 'package:logger/logger.dart';
 import 'package:image/image.dart' as img;
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 final logger = Logger();
 
 class ScannerScreen extends StatefulWidget {
-  // CHANGED: Now accepts patientUid (which is currentConnectionId)
   final String patientUid;
   const ScannerScreen({super.key, required this.patientUid});
 

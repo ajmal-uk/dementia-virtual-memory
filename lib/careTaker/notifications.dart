@@ -146,12 +146,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (caretakerUid == null) return;
 
     try {
-      // Update connection status to rejected
       await _firestore.collection('connections').doc(connectionId).update({
         'status': 'rejected',
       });
 
-      // Delete the notification
       await _firestore
           .collection('caretaker')
           .doc(caretakerUid)
@@ -159,7 +157,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           .doc(notificationId)
           .delete();
 
-      // Notify user
       final userDoc = await _firestore.collection('user').doc(userUid).get();
       final playerIds = List<String>.from(userDoc.data()?['playerIds'] ?? []);
       await sendNotification(playerIds, 'Your connection request was declined');
