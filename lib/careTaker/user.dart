@@ -3,13 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-// Assuming the file containing the logic to fetch members by patientUid is imported here
-import 'family_scanner.dart'; // Import the correct ScannerScreen
-
-// DUMMY SCREEN FOR NAVIGATION - MODIFIED TO REFLECT THE NEW SIGNATURE
-// NOTE: Remove this placeholder if you have the real family_scanner_screen.dart imported.
-// If you are keeping it here, ensure the real logic is in family_scanner_screen.dart
-
 
 class User extends StatefulWidget {
   const User({super.key});
@@ -321,6 +314,18 @@ class _UserState extends State<User> {
         ),
       ),
     );
+  }
+
+  // --- Face Scanner Navigation Handler (UPDATED) ---
+  void _openFaceScanner() {
+    // Only navigate if connected and patientUid is known
+    if (_isConnected && _patientUid != null) {
+   
+    } else {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot open scanner: Not connected to a patient.')),
+      );
+    }
   }
 
   @override
