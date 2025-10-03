@@ -16,27 +16,21 @@ class WelcomePage extends StatelessWidget {
   }
 
   void _showAdminDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Admin Access'),
-        content: const Text('Are you sure you want to access Admin login?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _navigateTo(context, 'admin');
-            },
-            child: const Text('Proceed'),
-          ),
-        ],
-      ),
-    );
-  }
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Admin Login'),
+      content: const Text('Proceed to admin login?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: () {
+          Navigator.pop(context);
+          _navigateTo(context, 'admin');
+        }, child: const Text('Yes')),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -57,9 +51,9 @@ class WelcomePage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   GestureDetector(
-                    onLongPress: () => _showAdminDialog(context),
-                    child: const Text(
-                      'Welcome to DVMA',
+                      onLongPress: () => _showAdminDialog(context),
+                      child: const Text(
+                        'Welcome to DVMA',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,

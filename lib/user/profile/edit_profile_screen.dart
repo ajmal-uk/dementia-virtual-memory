@@ -1,5 +1,4 @@
 // lib/user/profile/edit_profile_screen.dart
-// lib/user/profile/edit_profile_screen.dart
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -46,7 +45,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _cityController = TextEditingController(text: widget.userData['city']);
     _stateController = TextEditingController(text: widget.userData['state']);
     _dob = widget.userData['dob']?.toDate();
-    _gender = widget.userData['gender'];
+    
+    // Handle gender case conversion
+    final genderFromData = widget.userData['gender'];
+    if (genderFromData is String) {
+      _gender = genderFromData.toLowerCase();
+    } else {
+      _gender = 'male'; // default
+    }
+    
     _profileImageUrl = widget.userData['profileImageUrl'] ?? '';
     _emergencyContacts = List<Map<String, dynamic>>.from(widget.userData['emergencyContacts'] ?? []);
   }
@@ -90,7 +97,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'city': _cityController.text.trim(),
           'state': _stateController.text.trim(),
           'dob': _dob != null ? Timestamp.fromDate(_dob!) : null,
-          'gender': _gender,
+          'gender': _gender?.toLowerCase(), // Ensure lowercase when saving
           'emergencyContacts': _emergencyContacts,
         });
         if (mounted) Navigator.pop(context, true);
@@ -104,14 +111,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _pickDob() async {
-    final picked = await showDatePicker(
+    final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _dob ?? DateTime.now(),
+      initialDate: _dob ?? DateTime(2000),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Colors.blueAccent,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
-    if (picked != null && mounted) {
-      setState(() => _dob = picked);
+    if (picked != null && picked != _dob) {
+      setState(() {
+        _dob = picked;
+      });
     }
   }
 
@@ -254,14 +275,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _gender,
+                value: _gender, // Now this will match exactly with lowercase values
                 hint: const Text('Select Gender'),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: Colors.white,
                 ),
-                items: ['Male', 'Female', 'Other'].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                items: [
+                  DropdownMenuItem(value: 'male', child: const Text('Male')),
+                  DropdownMenuItem(value: 'female', child: const Text('Female')),
+                  DropdownMenuItem(value: 'other', child: const Text('Other')),
+                ],
                 onChanged: (value) => setState(() => _gender = value),
               ),
               const SizedBox(height: 24),
@@ -314,7 +339,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         leading: const Icon(Icons.emergency, color: Colors.red),
                         title: Text(contact['name'] ?? ''),
                         subtitle: Text(
-                          'Relation: ${contact['relation'] ?? ''}\nPhone: ${contact['number'] ?? ''}',
+                          'Relation: ${contact['relation'] ?? ''}\\nPhone: ${contact['number'] ?? ''}',
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,

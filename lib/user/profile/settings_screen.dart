@@ -1,10 +1,10 @@
 // lib/user/profile/settings_screen.dart
-// lib/user/profile/settings_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../report_page.dart';
 import '../../welcome_page.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -23,7 +23,10 @@ class SettingsScreen extends StatelessWidget {
     await FirebaseAuth.instance.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('lastRole'); // Clear role on logout
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const WelcomePage()));
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const WelcomePage()),
+    );
   }
 
   @override
@@ -47,12 +50,18 @@ class SettingsScreen extends StatelessWidget {
           children: [
             const Text(
               'Account',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.blueAccent),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.blueAccent,
+              ),
             ),
             const SizedBox(height: 8),
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: ListTile(
                 leading: const Icon(Icons.logout, color: Colors.red),
                 title: const Text('Logout'),
@@ -60,12 +69,35 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+
             const Text(
               'Preferences',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.blueAccent),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.blueAccent,
+              ),
             ),
             const SizedBox(height: 8),
-            
+
+            /// 🔹 Added Report Option
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.report, color: Colors.orange),
+                title: const Text('Report'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const ReportPage(reporterRole: 'user'),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -1,4 +1,3 @@
-// lib/register_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,11 +7,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-// Enum to manage the state of the caretaker type radio buttons
 enum CaregiverType { relative, nurse }
-
-// Enum for Gender selection
 enum UserGender { male, female, other }
+enum FormSection { personal, address, caretaker, review }
 
 class RegisterPage extends StatefulWidget {
   final String role;
@@ -32,13 +29,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController localityController = TextEditingController();
   final TextEditingController cityController = TextEditingController();
   final TextEditingController stateController = TextEditingController();
-
-  // Caretaker specific: Experience years (reused for nurse)
-  final TextEditingController experienceYearsController =
-      TextEditingController();
-  // Controller for relation (used for relative)
+  final TextEditingController experienceYearsController = TextEditingController();
   final TextEditingController relationController = TextEditingController();
-  // Nurse specific
   final TextEditingController expBioController = TextEditingController();
   final TextEditingController gradNursingController = TextEditingController();
 
@@ -46,17 +38,19 @@ class _RegisterPageState extends State<RegisterPage> {
   final _firestore = FirebaseFirestore.instance;
   bool _loading = false;
 
-  // State variables
   CaregiverType _caregiverType = CaregiverType.relative;
   UserGender _selectedGender = UserGender.male;
   DateTime? _selectedDOB;
-
-  // File upload state (String stores the local path or XFile.path)
   String? _selectedProfileImagePath;
   String? _selectedCertificatePath;
 
-  // Image Picker instance
+  FormSection _currentSection = FormSection.personal;
+
   final ImagePicker _picker = ImagePicker();
+
+  // Default profile image URL
+  static const String defaultProfileImageUrl = 
+      'https://res.cloudinary.com/dts8hgf4f/image/upload/v1758882470/user_jvnx80.png';
 
   @override
   void dispose() {
@@ -76,10 +70,128 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  void _nextSection() {
+    if (!_validateCurrentSection()) return;
+
+    setState(() {
+      switch (_currentSection) {
+        case FormSection.personal:
+          _currentSection = FormSection.address;
+          break;
+        case FormSection.address:
+          if (widget.role == 'caretaker') {
+            _currentSection = FormSection.caretaker;
+          } else {
+            _currentSection = FormSection.review;
+          }
+          break;
+        case FormSection.caretaker:
+          _currentSection = FormSection.review;
+          break;
+        case FormSection.review:
+          _register();
+          break;
+      }
+    });
+  }
+
+  void _previousSection() {
+    setState(() {
+      switch (_currentSection) {
+        case FormSection.address:
+          _currentSection = FormSection.personal;
+          break;
+        case FormSection.caretaker:
+          _currentSection = FormSection.address;
+          break;
+        case FormSection.review:
+          if (widget.role == 'caretaker') {
+            _currentSection = FormSection.caretaker;
+          } else {
+            _currentSection = FormSection.address;
+          }
+          break;
+        case FormSection.personal:
+          break;
+      }
+    });
+  }
+
+  bool _validateCurrentSection() {
+    switch (_currentSection) {
+      case FormSection.personal:
+        if (nameController.text.trim().isEmpty ||
+            usernameController.text.trim().isEmpty ||
+            emailController.text.trim().isEmpty ||
+            passwordController.text.trim().isEmpty ||
+            phoneController.text.trim().isEmpty ||
+            _selectedDOB == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please fill in all personal information fields.'),
+            ),
+          );
+          return false;
+        }
+        return true;
+      case FormSection.address:
+        if (bioController.text.trim().isEmpty ||
+            localityController.text.trim().isEmpty ||
+            cityController.text.trim().isEmpty ||
+            stateController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please fill in all address fields.'),
+            ),
+          );
+          return false;
+        }
+        return true;
+      case FormSection.caretaker:
+        if (_caregiverType == CaregiverType.relative) {
+          if (relationController.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please enter your relation to the patient.'),
+              ),
+            );
+            return false;
+          }
+        } else if (_caregiverType == CaregiverType.nurse) {
+          if (experienceYearsController.text.trim().isEmpty ||
+              expBioController.text.trim().isEmpty ||
+              gradNursingController.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Please complete all nurse-specific experience fields.',
+                ),
+              ),
+            );
+            return false;
+          }
+          // Certificate validation for nurses
+          if (_selectedCertificatePath == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Please upload your graduation certificate as a nurse.',
+                ),
+              ),
+            );
+            return false;
+          }
+        }
+        return true;
+      case FormSection.review:
+        return true;
+    }
+  }
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDOB ?? DateTime(2000), // Default to year 2000
+      initialDate: _selectedDOB ?? DateTime(2000),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -102,33 +214,25 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  // Use ImagePicker for profile image
   void _pickProfileImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       setState(() {
         _selectedProfileImagePath = image.path;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile image selected.')),
-        );
       });
     }
   }
 
-  // Use ImagePicker for certificate image (optional for nurse)
   void _pickCertificate() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       setState(() {
         _selectedCertificatePath = image.path;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Certificate image selected.')),
-        );
       });
     }
   }
 
-  // Cloudinary upload logic - Uses CLOUDINARY_CLOUD_NAME from .env
+  // Cloudinary upload logic
   Future<String?> _uploadFile(String? filePath, String preset) async {
     if (filePath == null) return null;
 
@@ -153,8 +257,7 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       var request = http.MultipartRequest('POST', uri)
-        ..fields['upload_preset'] =
-            preset // Use the specific preset
+        ..fields['upload_preset'] = preset
         ..fields['cloud_name'] = cloudName;
 
       final file = await http.MultipartFile.fromPath('file', filePath);
@@ -167,100 +270,17 @@ class _RegisterPageState extends State<RegisterPage> {
         final responseData = json.decode(response.body);
         final secureUrl = responseData['secure_url'];
 
-        // Ensure a String URL is returned
         if (secureUrl is String && secureUrl.isNotEmpty) return secureUrl;
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Upload succeeded but no valid URL found.'),
-            ),
-          );
-        }
         return null;
       } else {
-        if (mounted) {
-          // Attempt to get a detailed error message from Cloudinary
-          String errorMessage = response.body;
-          try {
-            final errorResponse = json.decode(response.body);
-            errorMessage = errorResponse['error']?['message'] ?? response.body;
-          } catch (_) {
-            // response body wasn't JSON, use it as is
-          }
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Cloudinary upload failed: $errorMessage')),
-          );
-        }
         return null;
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error during file upload: $e')));
-      }
       return null;
     }
   }
 
   Future<void> _register() async {
-    // Basic form validation for non-empty fields
-    if (nameController.text.trim().isEmpty ||
-        usernameController.text.trim().isEmpty ||
-        emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty ||
-        phoneController.text.trim().isEmpty ||
-        bioController.text.trim().isEmpty ||
-        localityController.text.trim().isEmpty ||
-        cityController.text.trim().isEmpty ||
-        stateController.text.trim().isEmpty ||
-        _selectedDOB == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Please fill in all mandatory text fields and select Date of Birth.',
-            ),
-          ),
-        );
-      }
-      return;
-    }
-
-    // Caretaker specific validation for conditional fields
-    if (widget.role == 'caretaker') {
-      if (_caregiverType == CaregiverType.relative &&
-          relationController.text.trim().isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please enter your relation to the patient.'),
-            ),
-          );
-        }
-        return;
-      }
-      if (_caregiverType == CaregiverType.nurse) {
-        // Only validate required nurse fields (images are optional)
-        if (experienceYearsController.text.trim().isEmpty ||
-            expBioController.text.trim().isEmpty ||
-            gradNursingController.text.trim().isEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Please complete all nurse-specific experience fields (Years, Bio, Qualification).',
-                ),
-              ),
-            );
-          }
-          return;
-        }
-      }
-    }
-
     setState(() => _loading = true);
     String? profileUrl;
     String? certificateUrl;
@@ -282,18 +302,28 @@ class _RegisterPageState extends State<RegisterPage> {
           .get();
       if (snapPhone.docs.isNotEmpty) throw 'Phone number already exists';
 
-      // UPLOAD PROFILE IMAGE using the requested preset: 'care_taker_image'
-      profileUrl = await _uploadFile(
-        _selectedProfileImagePath,
-        'care_taker_image',
-      );
+      // Upload profile image or use default
+      if (_selectedProfileImagePath != null) {
+        profileUrl = await _uploadFile(
+          _selectedProfileImagePath,
+          'care_taker_image',
+        );
+      } else {
+        // Use default profile image if none selected
+        profileUrl = defaultProfileImageUrl;
+      }
 
-      // UPLOAD CERTIFICATE IMAGE (Nurse only) using the requested preset: 'graduation'
+      // Upload certificate for nurses
       if (widget.role == 'caretaker' && _caregiverType == CaregiverType.nurse) {
         certificateUrl = await _uploadFile(
           _selectedCertificatePath,
           'graduation',
         );
+        
+        // Double check certificate upload for nurses
+        if (certificateUrl == null) {
+          throw 'Failed to upload graduation certificate. Please try again.';
+        }
       }
 
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -316,7 +346,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'locality': localityController.text.trim(),
           'city': cityController.text.trim(),
           'state': stateController.text.trim(),
-          'profileImageUrl': profileUrl ?? '', // Save URL (or empty string)
+          'profileImageUrl': profileUrl ?? defaultProfileImageUrl, // Ensure default is used
           'isConnected': false,
           'currentConnectionId': null,
           'emergencyContacts': [],
@@ -336,18 +366,15 @@ class _RegisterPageState extends State<RegisterPage> {
             data['graduationOnNursing'] = '';
             data['graduationCertificateUrl'] = '';
           } else {
-            // CaregiverType.nurse
             data['experienceYears'] =
                 int.tryParse(experienceYearsController.text.trim()) ?? 0;
             data['relation'] = '';
             data['experienceBio'] = expBioController.text.trim();
             data['graduationOnNursing'] = gradNursingController.text.trim();
-            data['graduationCertificateUrl'] =
-                certificateUrl ?? ''; // Save URL (or empty string)
+            data['graduationCertificateUrl'] = certificateUrl ?? '';
           }
 
-          // Existing caretaker fields
-          data.addAll({'isApprove': false, 'isRemove': false, 'roadmap': []});
+          data.addAll({'isApprove': false, 'roadmap': []});
         }
 
         await _firestore.collection(widget.role).doc(uid).set(data);
@@ -369,7 +396,6 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       if (mounted) {
-        // Handle specific Firebase/Auth exceptions if needed
         String message = e.toString().contains('firebase_auth')
             ? (e as FirebaseAuthException).message ?? e.toString()
             : e.toString();
@@ -383,37 +409,31 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  // MODIFIED: Tighter padding and Flexible text to fix the 7-pixel overflow
   Widget _buildFilePicker({
     required String label,
     required VoidCallback onTap,
     required bool isSelected,
     required IconData icon,
+    bool isRequired = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: InkWell(
         onTap: onTap,
         child: InputDecorator(
-          decoration:
-              _inputDecoration(
-                label,
-                isSelected ? Icons.check_circle : icon,
-              ).copyWith(
-                // Tighter padding to prevent overflow
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 18,
-                ),
-                fillColor: isSelected
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.white,
-                prefixIcon: null, // Removed prefix icon since it's in the Row
-              ),
+          decoration: _inputDecoration(
+            isRequired ? '$label *' : label, 
+            icon
+          ).copyWith(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 18,
+            ),
+            fillColor: isSelected ? Colors.green.withOpacity(0.1) : Colors.white,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Use Flexible to prevent text overflow
               Flexible(
                 child: Text(
                   isSelected ? '$label Uploaded' : 'Click to Upload $label',
@@ -436,7 +456,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // Helper function to build the radio buttons (Caretaker Type)
   Widget _buildRadio(CaregiverType value, String title) {
     return Expanded(
       child: ListTile(
@@ -456,7 +475,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // Helper function to build the radio buttons (Gender)
   Widget _buildGenderRadio(UserGender value, String title) {
     return Expanded(
       child: ListTile(
@@ -476,11 +494,353 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  // Progress indicator
+  Widget _buildProgressIndicator() {
+    final sections = widget.role == 'caretaker'
+        ? ['Personal', 'Address', 'Caretaker', 'Review']
+        : ['Personal', 'Address', 'Review'];
+    
+    final currentIndex = _currentSection.index;
+    final totalSections = sections.length;
+
+    return Column(
+      children: [
+        // Progress bar
+        LinearProgressIndicator(
+          value: (currentIndex + 1) / totalSections,
+          backgroundColor: Colors.grey[300],
+          color: Colors.blueAccent,
+        ),
+        const SizedBox(height: 16),
+        // Section labels
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: sections.asMap().entries.map((entry) {
+            final index = entry.key;
+            final section = entry.value;
+            return Column(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: index <= currentIndex ? Colors.blueAccent : Colors.grey[300],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        color: index <= currentIndex ? Colors.white : Colors.grey[600],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  section,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: index == currentIndex ? FontWeight.bold : FontWeight.normal,
+                    color: index == currentIndex ? Colors.blueAccent : Colors.grey[600],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  // Personal Information Section
+  Widget _buildPersonalSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Personal Information',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(nameController, 'Full Name', Icons.person),
+        _buildTextField(usernameController, 'Username', Icons.alternate_email),
+        _buildTextField(emailController, 'Email', Icons.email),
+        _buildTextField(
+          passwordController,
+          'Password',
+          Icons.lock,
+          obscureText: true,
+        ),
+        _buildTextField(
+          phoneController,
+          'Phone Number',
+          Icons.phone,
+          keyboardType: TextInputType.phone,
+        ),
+
+        // Profile Image Upload
+        _buildFilePicker(
+          label: 'Profile Image',
+          onTap: _pickProfileImage,
+          isSelected: _selectedProfileImagePath != null,
+          icon: Icons.person_pin,
+        ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text(
+            '* If no profile image is selected, a default image will be used',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+
+        // Gender Selection
+        const SizedBox(height: 8),
+        const Text(
+          'Gender:',
+          style: TextStyle(fontSize: 16, color: Colors.black87),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            _buildGenderRadio(UserGender.male, 'Male'),
+            _buildGenderRadio(UserGender.female, 'Female'),
+            _buildGenderRadio(UserGender.other, 'Other'),
+          ],
+        ),
+
+        // Date of Birth Picker
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16, top: 8),
+          child: InkWell(
+            onTap: () => _selectDate(context),
+            child: InputDecorator(
+              decoration: _inputDecoration('Date of Birth', Icons.calendar_today),
+              child: Text(
+                _selectedDOB == null
+                    ? 'Select Date of Birth'
+                    : '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Address Section
+  Widget _buildAddressSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Address Information',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          bioController,
+          'Bio (Tell us about yourself)',
+          Icons.info_outline,
+          maxLines: 3,
+        ),
+        _buildTextField(localityController, 'Locality', Icons.location_on),
+        _buildTextField(cityController, 'City', Icons.location_city),
+        _buildTextField(stateController, 'State', Icons.public),
+      ],
+    );
+  }
+
+  // Caretaker Section
+  Widget _buildCaretakerSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Caretaker Details',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Caregiver Type Radio Button Selection
+        const Text(
+          'I am registering as a:',
+          style: TextStyle(fontSize: 16, color: Colors.black87),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            _buildRadio(CaregiverType.relative, 'Relative'),
+            _buildRadio(CaregiverType.nurse, 'Nurse'),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Conditional Input Field
+        if (_caregiverType == CaregiverType.relative) ...[
+          _buildTextField(
+            relationController,
+            'Relation to Patient',
+            Icons.family_restroom,
+          ),
+        ] else ...[
+          _buildTextField(
+            experienceYearsController,
+            'Experience Years (in years)',
+            Icons.work_history,
+            keyboardType: TextInputType.number,
+          ),
+          _buildTextField(
+            expBioController,
+            'Experience Bio',
+            Icons.description,
+            maxLines: 3,
+          ),
+          _buildTextField(
+            gradNursingController,
+            'Nursing Qualification/Graduation',
+            Icons.school,
+          ),
+          _buildFilePicker(
+            label: 'Graduation Certificate (Image)',
+            onTap: _pickCertificate,
+            isSelected: _selectedCertificatePath != null,
+            icon: Icons.note_alt,
+            isRequired: true,
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16),
+            child: Text(
+              '* Graduation certificate is required for nurse registration',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.red,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // Review Section
+  Widget _buildReviewSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Review Information',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent,
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Personal Info Review
+        _buildReviewItem('Full Name', nameController.text),
+        _buildReviewItem('Username', usernameController.text),
+        _buildReviewItem('Email', emailController.text),
+        _buildReviewItem('Phone', phoneController.text),
+        _buildReviewItem('Gender', _selectedGender.name),
+        _buildReviewItem('Date of Birth', 
+          _selectedDOB != null 
+            ? '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}'
+            : 'Not selected'
+        ),
+        _buildReviewItem('Profile Image', 
+          _selectedProfileImagePath != null ? 'Uploaded' : 'Default image will be used'
+        ),
+        
+        // Address Info Review
+        _buildReviewItem('Bio', bioController.text),
+        _buildReviewItem('Locality', localityController.text),
+        _buildReviewItem('City', cityController.text),
+        _buildReviewItem('State', stateController.text),
+        
+        // Caretaker Specific Review
+        if (widget.role == 'caretaker') ...[
+          _buildReviewItem('Caregiver Type', _caregiverType.name),
+          if (_caregiverType == CaregiverType.relative)
+            _buildReviewItem('Relation', relationController.text),
+          if (_caregiverType == CaregiverType.nurse) ...[
+            _buildReviewItem('Experience Years', experienceYearsController.text),
+            _buildReviewItem('Experience Bio', expBioController.text),
+            _buildReviewItem('Nursing Qualification', gradNursingController.text),
+            _buildReviewItem('Graduation Certificate', 
+              _selectedCertificatePath != null ? 'Uploaded' : 'Not uploaded'
+            ),
+          ]
+        ],
+        
+        const SizedBox(height: 16),
+        Text(
+          'Please review your information before submitting.',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value.isEmpty ? 'Not provided' : value,
+              style: TextStyle(
+                color: value.isEmpty ? Colors.grey : Colors.black54,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset:
-          true, // Ensure content resizes when keyboard appears
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text('Register as ${widget.role.toUpperCase()}'),
         backgroundColor: Colors.blueAccent,
@@ -494,206 +854,93 @@ class _RegisterPageState extends State<RegisterPage> {
             colors: [Colors.blueAccent.withOpacity(0.1), Colors.white],
           ),
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Registration Details',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
-                ),
-              ),
-              const SizedBox(height: 24),
+        child: Column(
+          children: [
+            // Progress Indicator
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: _buildProgressIndicator(),
+            ),
 
-              // Basic Fields
-              _buildTextField(nameController, 'Full Name', Icons.person),
-              _buildTextField(
-                usernameController,
-                'Username',
-                Icons.alternate_email,
-              ),
-              _buildTextField(emailController, 'Email', Icons.email),
-              _buildTextField(
-                passwordController,
-                'Password',
-                Icons.lock,
-                obscureText: true,
-              ),
-              _buildTextField(
-                phoneController,
-                'Phone Number',
-                Icons.phone,
-                keyboardType: TextInputType.phone,
-              ),
-
-              // Profile Image Upload (Optional) - Uses 'care_taker_image' preset
-              _buildFilePicker(
-                label: 'Profile Image (Optional)',
-                onTap: _pickProfileImage,
-                isSelected: _selectedProfileImagePath != null,
-                icon: Icons.person_pin,
-              ),
-
-              // Gender Selection
-              const SizedBox(height: 8),
-              const Text(
-                'Gender:',
-                style: TextStyle(fontSize: 16, color: Colors.black87),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  _buildGenderRadio(UserGender.male, 'Male'),
-                  _buildGenderRadio(UserGender.female, 'Female'),
-                  _buildGenderRadio(UserGender.other, 'Other'),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Date of Birth Picker
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: InkWell(
-                  onTap: () => _selectDate(context),
-                  child: InputDecorator(
-                    decoration: _inputDecoration(
-                      'Date of Birth',
-                      Icons.calendar_today,
-                    ),
-                    child: Text(
-                      _selectedDOB == null
-                          ? 'Select Date of Birth'
-                          : '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Bio
-              _buildTextField(
-                bioController,
-                'Bio (Tell us about yourself)',
-                Icons.info_outline,
-                maxLines: 3,
-              ),
-
-              const SizedBox(height: 16),
-              const Text(
-                'Address Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blueAccent,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Locality, City, State
-              _buildTextField(
-                localityController,
-                'Locality',
-                Icons.location_on,
-              ),
-              _buildTextField(cityController, 'City', Icons.location_city),
-              _buildTextField(stateController, 'State', Icons.public),
-
-              if (widget.role == 'caretaker') ...[
-                const SizedBox(height: 24),
-                const Text(
-                  'Caretaker Details',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blueAccent,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Caregiver Type Radio Button Selection
-                const Text(
-                  'I am registering as a:',
-                  style: TextStyle(fontSize: 16, color: Colors.black87),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+            // Form Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildRadio(CaregiverType.relative, 'Relative'),
-                    _buildRadio(CaregiverType.nurse, 'Nurse'),
+                    if (_currentSection == FormSection.personal)
+                      _buildPersonalSection(),
+                    if (_currentSection == FormSection.address)
+                      _buildAddressSection(),
+                    if (_currentSection == FormSection.caretaker)
+                      _buildCaretakerSection(),
+                    if (_currentSection == FormSection.review)
+                      _buildReviewSection(),
+
+                    const SizedBox(height: 32),
                   ],
                 ),
-                const SizedBox(height: 16),
+              ),
+            ),
 
-                // Conditional Input Field
-                if (_caregiverType == CaregiverType.relative) ...[
-                  // Show Relation Tag input
-                  _buildTextField(
-                    relationController,
-                    'Relation to Patient',
-                    Icons.family_restroom,
-                  ),
-                ] else ...[
-                  // Show Nurse-specific fields
-                  _buildTextField(
-                    experienceYearsController,
-                    'Experience Years (in years)',
-                    Icons.work_history,
-                    keyboardType: TextInputType.number,
-                  ),
-                  // Experience Bio
-                  _buildTextField(
-                    expBioController,
-                    'Experience Bio',
-                    Icons.description,
-                    maxLines: 3,
-                  ),
-                  // Graduation on Nursing
-                  _buildTextField(
-                    gradNursingController,
-                    'Nursing Qualification/Graduation',
-                    Icons.school,
-                  ),
-                  // Graduation Certificate Upload (Nurse Only - Optional) - Uses 'graduation' preset
-                  _buildFilePicker(
-                    label: 'Graduation Certificate (Image) (Optional)',
-                    onTap: _pickCertificate,
-                    isSelected: _selectedCertificatePath != null,
-                    icon: Icons.note_alt,
-                  ),
-                ],
-              ],
-
-              const SizedBox(height: 32),
-              _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.blueAccent,
-                      ),
-                    )
-                  : ElevatedButton(
-                      onPressed: _register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+            // Navigation Buttons
+            Container(
+              padding: const EdgeInsets.all(24.0),
+              child: Row(
+                children: [
+                  // Back Button
+                  if (_currentSection != FormSection.personal)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _previousSection,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: Text(
-                        'Register as ${widget.role}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
+                        child: const Text(
+                          'Back',
+                          style: TextStyle(fontSize: 16),
                         ),
                       ),
                     ),
-            ],
-          ),
+                  if (_currentSection != FormSection.personal)
+                    const SizedBox(width: 16),
+
+                  // Next/Submit Button
+                  Expanded(
+                    child: _loading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.blueAccent,
+                            ),
+                          )
+                        : ElevatedButton(
+                            onPressed: _nextSection,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              _currentSection == FormSection.review
+                                  ? 'Submit'
+                                  : 'Next',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

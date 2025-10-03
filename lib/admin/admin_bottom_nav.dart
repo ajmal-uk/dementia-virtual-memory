@@ -1,7 +1,13 @@
+// New file: lib/admin/admin_bottom_nav.dart
 import 'package:flutter/material.dart';
+import 'user/users_screen.dart';
+import 'caretaker/caretakers_screen.dart';
+import 'reports_screen.dart';
+import 'notifications_screen.dart';
+import 'settings_screen.dart';
 
 class AdminBottomNav extends StatefulWidget {
-  const AdminBottomNav({Key? key}) : super(key: key);
+  const AdminBottomNav({super.key});
 
   @override
   State<AdminBottomNav> createState() => _AdminBottomNavState();
@@ -11,9 +17,11 @@ class _AdminBottomNavState extends State<AdminBottomNav> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const Center(child: Text('Admin Panel')),
-    const Center(child: Text('Admin Reports')),
-    const Center(child: Text('Admin Settings')),
+    const UsersScreen(),
+    const CaretakersScreen(),
+    const ReportsScreen(),
+    const AdminNotificationsScreen(),
+    const AdminSettingsScreen(),
   ];
 
   @override
@@ -23,9 +31,14 @@ class _AdminBottomNavState extends State<AdminBottomNav> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.admin_panel_settings), label: 'Panel'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
+          BottomNavigationBarItem(icon: Icon(Icons.manage_accounts), label: 'Caretakers'),
           BottomNavigationBarItem(icon: Icon(Icons.report), label: 'Reports'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),

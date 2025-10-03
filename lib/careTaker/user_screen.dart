@@ -1,17 +1,16 @@
-// lib/careTaker/user.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
-class User extends StatefulWidget {
-  const User({super.key});
+class UserScreen extends StatefulWidget {
+  const UserScreen({super.key});
 
   @override
-  State<User> createState() => _UserState();
+  State<UserScreen> createState() => _UserScreenState();
 }
 
-class _UserState extends State<User> {
+class _UserScreenState extends State<UserScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -40,9 +39,9 @@ class _UserState extends State<User> {
 
     try {
       final caretakerDoc = await _firestore
-          .collection('caretaker')
-          .doc(caretakerUid)
-          .get();
+        .collection('caretaker')
+        .doc(caretakerUid)
+        .get();
       final data = caretakerDoc.data();
 
       // Check for isConnected and currentConnectionId
@@ -51,23 +50,23 @@ class _UserState extends State<User> {
 
       if (isConnectedField && connectionId != null && connectionId.isNotEmpty) {
         final connectionDoc = await _firestore
-            .collection('connections')
-            .doc(connectionId)
-            .get();
+          .collection('connections')
+          .doc(connectionId)
+          .get();
         final patientUid = connectionDoc.data()?['user_uid'] as String?;
 
         if (patientUid != null) {
           final patientDoc = await _firestore
-              .collection('user')
-              .doc(patientUid)
-              .get();
+            .collection('user')
+            .doc(patientUid)
+            .get();
 
           if (patientDoc.exists) {
             if (mounted) {
               setState(() {
                 _patientUid = patientUid;
                 _patientName =
-                    patientDoc.data()?['fullName'] ?? 'Unknown Patient';
+                  patientDoc.data()?['fullName'] ?? 'Unknown Patient';
                 _isConnected = true;
                 _isLoading = false; // FINALLY DONE LOADING
               });
@@ -102,10 +101,7 @@ class _UserState extends State<User> {
   Stream<QuerySnapshot<Map<String, dynamic>>> _getTasksStream() {
     if (_patientUid == null) return Stream.empty();
 
-    final coll = _firestore
-        .collection('user')
-        .doc(_patientUid)
-        .collection('to_dos');
+    final coll = _firestore.collection('user').doc(_patientUid).collection('to_dos');
 
     final now = DateTime.now();
     final todayMidnight = DateTime(now.year, now.month, now.day);
@@ -115,23 +111,23 @@ class _UserState extends State<User> {
 
     // FIX: Using correct path for recurring tasks
     final recurringColl = _firestore
-        .collection('user')
-        .doc(_patientUid)
-        .collection('recurring_tasks');
+      .collection('user')
+      .doc(_patientUid)
+      .collection('recurring_tasks');
 
     if (_selectedTab == 'Recurring') {
       return recurringColl.orderBy('createdAt', descending: true).snapshots();
     } else if (_selectedTab == 'Today') {
       return coll
-          .where('dueDate', isGreaterThanOrEqualTo: todayStart)
-          .where('dueDate', isLessThan: todayEnd)
-          .orderBy('dueDate', descending: false)
-          .snapshots();
+        .where('dueDate', isGreaterThanOrEqualTo: todayStart)
+        .where('dueDate', isLessThan: todayEnd)
+        .orderBy('dueDate', descending: false)
+        .snapshots();
     } else if (_selectedTab == 'Upcoming') {
       return coll
-          .where('dueDate', isGreaterThanOrEqualTo: todayEnd)
-          .orderBy('dueDate', descending: false)
-          .snapshots();
+        .where('dueDate', isGreaterThanOrEqualTo: todayEnd)
+        .orderBy('dueDate', descending: false)
+        .snapshots();
     } else if (_selectedTab == 'Completed') {
       // Non-indexed query for Completed tab (sorted locally)
       return coll.where('completed', isEqualTo: true).snapshots();
@@ -188,36 +184,38 @@ class _UserState extends State<User> {
 
   Widget _buildTaskCard(DocumentSnapshot doc) {
     // We can safely cast data()! to Map<String, dynamic> since we check doc.exists in the StreamBuilder
-    final task = doc.data()! as Map<String, dynamic>;
+    final task = doc.data() as Map<String, dynamic>;
     final isTemplate = _selectedTab == 'Recurring';
 
     // Fields from Firestore document
     final completed = isTemplate
-        ? false
-        : (task['completed'] as bool? ?? false);
+      ? false
+      : (task['completed'] as bool? ?? false);
     final title = task['task'] as String? ?? 'Untitled Task';
     final details = task['description'] as String? ?? 'No details provided.';
     final dueDate = task['dueDate'] as Timestamp?;
     final reminderTime = task['reminderTime'] as Timestamp?;
-    final createdBy = task['createdBy'] as String? ?? 'N/A';
 
     final Map<String, dynamic>? dailyDueTime =
-        task['dailyDueTime'] as Map<String, dynamic>?;
+      task['dailyDueTime'] as Map<String, dynamic>?;
     final Map<String, dynamic>? dailyReminderTime =
-        task['dailyReminderTime'] as Map<String, dynamic>?;
+      task['dailyReminderTime'] as Map<String, dynamic>?;
 
     return Card(
       elevation: 3,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 8,
+      ),
       child: ExpansionTile(
         key: Key(doc.id),
         leading: Icon(
           isTemplate
-              ? Icons.repeat
-              : (completed ? Icons.check_circle : Icons.list_alt),
+            ? Icons.repeat
+            : (completed ? Icons.check_circle : Icons.list_alt),
           color: isTemplate
-              ? Colors.indigo
-              : (completed ? Colors.green : Colors.orange),
+            ? Colors.indigo
+            : (completed ? Colors.green : Colors.orange),
         ),
         title: Text(
           title,
@@ -228,11 +226,11 @@ class _UserState extends State<User> {
         ),
         // Display status/due date in subtitle
         subtitle: isTemplate
-            ? const Text('Daily Template', style: TextStyle(color: Colors.blue))
-            : Text(
-                'Status: ${completed ? 'Completed' : 'Pending'} | Due: ${_formatTimestamp(dueDate)}',
-                style: TextStyle(color: completed ? Colors.green : Colors.red),
-              ),
+          ? const Text('Daily Template', style: TextStyle(color: Colors.blue))
+          : Text(
+              'Status: ${completed ? 'Completed' : 'Pending'} | Due: ${_formatTimestamp(dueDate)}',
+              style: TextStyle(color: completed ? Colors.green : Colors.red),
+            ),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
@@ -252,7 +250,7 @@ class _UserState extends State<User> {
                 Text(
                   'Created At: ${_formatTimestamp(task['createdAt'] as Timestamp?)}',
                 ),
-                Text('Created By: $createdBy'),
+                Text('Created By: ${task['createdBy'] as String? ?? 'N/A'}'),
 
                 if (!isTemplate) ...[
                   Text(
@@ -276,18 +274,11 @@ class _UserState extends State<User> {
 
   Widget _filterChip(String label) {
     return ChoiceChip(
-      label: Text(label, style: const TextStyle(fontSize: 14)),
-      selected: _selectedTab == label,
-      onSelected: (selected) {
-        if (selected && mounted) {
-          setState(() => _selectedTab = label);
-        }
+      label: const Text('Approved'),
+      selected: _selectedTab == 'Approved',
+      onSelected: (sel) {
+        if (sel) setState(() => _selectedTab = 'Approved');
       },
-      selectedColor: Colors.indigo,
-      backgroundColor: Colors.grey[300],
-      labelStyle: TextStyle(
-        color: _selectedTab == label ? Colors.white : Colors.black,
-      ),
     );
   }
 
@@ -320,9 +311,9 @@ class _UserState extends State<User> {
   void _openFaceScanner() {
     // Only navigate if connected and patientUid is known
     if (_isConnected && _patientUid != null) {
-   
+      
     } else {
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot open scanner: Not connected to a patient.')),
       );
     }
@@ -367,15 +358,15 @@ class _UserState extends State<User> {
       ),
       // FLOATING ACTION BUTTON IMPLEMENTATION: Conditional on connection status
       floatingActionButton: showScannerButton
-          ? FloatingActionButton.extended(
-              onPressed: _openFaceScanner,
-              label: const Text('Face Scan', style: TextStyle(color: Colors.white)),
-              icon: const Icon(Icons.face_unlock_outlined, color: Colors.white),
-              backgroundColor: Colors.indigo,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 6,
-            )
-          : null, // Don't show the button if not connected
+        ? FloatingActionButton.extended(
+            onPressed: _openFaceScanner,
+            label: const Text('Face Scan', style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.face_unlock_outlined, color: Colors.white),
+            backgroundColor: Colors.indigo,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 6,
+          )
+        : null, // Don't show the button if not connected
       body: Column(
         children: [
           _buildPatientDetails(),
@@ -428,11 +419,11 @@ class _UserState extends State<User> {
                     final bData = b.data() as Map<String, dynamic>;
 
                     final aDate =
-                        (aData['dueDate'] as Timestamp?)?.toDate() ??
-                        DateTime(0);
+                      (aData['dueDate'] as Timestamp?)?.toDate() ??
+                      DateTime(0);
                     final bDate =
-                        (bData['dueDate'] as Timestamp?)?.toDate() ??
-                        DateTime(0);
+                      (bData['dueDate'] as Timestamp?)?.toDate() ??
+                      DateTime(0);
 
                     // Sort descending (newest completed tasks first)
                     return bDate.compareTo(aDate);

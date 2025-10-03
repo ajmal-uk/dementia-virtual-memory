@@ -1,42 +1,43 @@
-// lib/user/user_bottom_nav.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'diary/diary_screen.dart';
-import 'family/family_screen.dart';
-import 'home/home_screen.dart';
-import 'caretaker/caretaker_screen.dart';
-import 'profile/user_profile.dart';
+import 'user_screen.dart';
+import 'profile_screen.dart';
+import 'notifications_screen.dart';
 
-class UserBottomNav extends StatefulWidget {
-  const UserBottomNav({super.key});
+class CareTaker extends StatefulWidget {
+  const CareTaker({super.key});
 
   @override
-  State<UserBottomNav> createState() => _UserBottomNavState();
+  State<CareTaker> createState() => _CareTakerState();
 }
 
-class _UserBottomNavState extends State<UserBottomNav> {
+class _CareTakerState extends State<CareTaker> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const HomeScreen(),
-    const FamilyScreen(),
-    const CaretakerScreen(),
-    const UserProfile(),
-    const DiaryScreen(),
+    UserScreen(),
+    const NotificationsScreen(), 
+    const Profile(),
   ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   Future<void> _checkBanned() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
     final doc = await FirebaseFirestore.instance
-        .collection('user')
+        .collection('caretaker')
         .doc(uid)
         .get();
 
     if (doc.data()?['isBanned'] == true) {
-      if (!mounted) return; // ✅ Prevent error if widget disposed
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -60,7 +61,7 @@ class _UserBottomNavState extends State<UserBottomNav> {
   @override
   void initState() {
     super.initState();
-    _checkBanned(); // ✅ Run when user opens the app
+    _checkBanned();
   }
 
   @override
@@ -69,19 +70,16 @@ class _UserBottomNavState extends State<UserBottomNav> {
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blueAccent,
+        onTap: _onItemTapped,
+        selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Family'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'User'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.manage_accounts),
-            label: 'CareTaker',
+            icon: Icon(Icons.notifications),
+            label: 'Notification',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Diary'),
         ],
       ),
     );

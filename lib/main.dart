@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'welcome_page.dart';
 import 'user/user_bottom_nav.dart';
-import 'careTaker/care_taker.dart';
+import 'careTaker/caretaker_bottom_nav.dart';
 import 'admin/admin_bottom_nav.dart';
 
 void main() async {
@@ -75,3 +75,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+
+

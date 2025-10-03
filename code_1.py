@@ -7,7 +7,7 @@ ROOT_DIR = "lib" # change if your root folder has a different name or path
 OUTPUT_JSON = "structure1.json"
 MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024 # 2MB per file max (adjust if needed)
 TEXT_ENCODINGS = ["utf-8", "latin-1", "utf-16"]
-IGNORED_DIR_NAMES = {"my_env", "__pycache__", ".venv", ".git", "admin"}# directories to skip entirely
+IGNORED_DIR_NAMES = {"my_env", "__pycache__", ".venv", ".git","admin"}# directories to skip entirely
 IMAGE_EXTENSIONS = {".ico",".svg", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".webmanifest",".apk"} # image files to skip reading
 def read_file_content(path: Path):
     """

@@ -23,11 +23,12 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <application
-        android:label="dementia_virtual_memory"
+        android:label="DVM"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
-        android:enableOnBackInvokedCallback="true"> <!-- Added for Android 13+ back handling -->
+        android:enableOnBackInvokedCallback="true">
+
 
         <activity
             android:name=".MainActivity"
