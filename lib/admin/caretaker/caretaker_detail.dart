@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../utils/notification_helper.dart';
@@ -56,7 +55,6 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> {
   }
 
   Future<void> _unbindConnection() async {
-    // Similar to user_detail, but for caretaker
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -90,23 +88,41 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> {
             });
           }
 
-          // Notify both
           final caretakerPlayerIds = List<String>.from(_caretakerData?['playerIds'] ?? []);
           final userPlayerIds = List<String>.from(_userData?['playerIds'] ?? []);
           await sendNotification(caretakerPlayerIds, 'Your connection has been unbound by admin.');
           await sendNotification(userPlayerIds, 'Your connection has been unbound by admin.');
 
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection unbound')));
+          // Add to Firestore notifications
+          await _firestore.collection('caretaker').doc(widget.caretakerId).collection('notifications').add({
+            'type': 'admin',
+            'message': 'Your connection has been unbound by admin.',
+            'createdAt': Timestamp.now(),
+            'isRead': false,
+          });
+          if (userUid != null) {
+            await _firestore.collection('user').doc(userUid).collection('notifications').add({
+              'type': 'admin',
+              'message': 'Your connection has been unbound by admin.',
+              'createdAt': Timestamp.now(),
+              'isRead': false,
+            });
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection unbound')));
+          }
           _loadCaretakerData();
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
       }
     }
   }
 
   Future<void> _banCaretaker() async {
-    // Similar to user ban
     final reasonController = TextEditingController();
     final confirm = await showDialog<bool>(
       context: context,
@@ -133,29 +149,39 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> {
     if (confirm == true) {
       try {
         await _firestore.collection('caretaker').doc(widget.caretakerId).update({'isBanned': true});
-        // Unbind if connected
         if (_caretakerData?['isConnected'] == true) {
           _unbindConnection();
         }
-        // Notify caretaker
         final caretakerPlayerIds = List<String>.from(_caretakerData?['playerIds'] ?? []);
         await sendNotification(caretakerPlayerIds, 'Your account has been banned. Reason: ${reasonController.text}');
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Caretaker banned')));
+        // Add to Firestore notifications
+        await _firestore.collection('caretaker').doc(widget.caretakerId).collection('notifications').add({
+          'type': 'admin',
+          'message': 'Your account has been banned. Reason: ${reasonController.text}',
+          'createdAt': Timestamp.now(),
+          'isRead': false,
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Caretaker banned')));
+        }
         _loadCaretakerData();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
       }
     }
   }
 
   Future<void> _approveCaretaker() async {
     await _firestore.collection('caretaker').doc(widget.caretakerId).update({'isApprove': true});
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Caretaker approved')));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Caretaker approved')));
+    }
     _loadCaretakerData();
   }
 
   Future<void> _sendNotification() async {
-    // Similar to user
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -178,9 +204,20 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> {
       try {
         final playerIds = List<String>.from(_caretakerData?['playerIds'] ?? []);
         await sendNotification(playerIds, '${_titleController.text}: ${_messageController.text}');
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification sent')));
+        // Add to Firestore notifications
+        await _firestore.collection('caretaker').doc(widget.caretakerId).collection('notifications').add({
+          'type': 'admin',
+          'message': '${_titleController.text}: ${_messageController.text}',
+          'createdAt': Timestamp.now(),
+          'isRead': false,
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification sent')));
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
       }
     }
   }
@@ -204,15 +241,12 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Caretaker details
             Text('Name: ${_caretakerData?['fullName']}'),
             Text('Type: ${_caretakerData?['caregiverType']}'),
-            // Add more fields...
             if (_userData != null) ...[
               const SizedBox(height: 20),
               const Text('Connected User:'),
               Text('Name: ${_userData?['fullName']}'),
-              // Add more user details
             ],
           ],
         ),

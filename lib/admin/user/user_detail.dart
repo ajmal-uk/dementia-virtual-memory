@@ -1,4 +1,3 @@
-// New file: lib/admin/user_detail.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -90,11 +89,27 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
             });
           }
 
-          // Notify both
+          // Notify both via push
           final userPlayerIds = List<String>.from(_userData?['playerIds'] ?? []);
           final caretakerPlayerIds = List<String>.from(_caretakerData?['playerIds'] ?? []);
           await sendNotification(userPlayerIds, 'Your connection has been unbound by admin.');
           await sendNotification(caretakerPlayerIds, 'Your connection has been unbound by admin.');
+
+          // Add to Firestore notifications
+          await _firestore.collection('user').doc(widget.userId).collection('notifications').add({
+            'type': 'admin',
+            'message': 'Your connection has been unbound by admin.',
+            'createdAt': Timestamp.now(),
+            'isRead': false,
+          });
+          if (caretakerUid != null) {
+            await _firestore.collection('caretaker').doc(caretakerUid).collection('notifications').add({
+              'type': 'admin',
+              'message': 'Your connection has been unbound by admin.',
+              'createdAt': Timestamp.now(),
+              'isRead': false,
+            });
+          }
 
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection unbound')));
           _loadUserData();
@@ -136,9 +151,16 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
         if (_userData?['isConnected'] == true) {
           _unbindConnection();
         }
-        // Notify user
+        // Notify user via push
         final userPlayerIds = List<String>.from(_userData?['playerIds'] ?? []);
         await sendNotification(userPlayerIds, 'Your account has been banned. Reason: ${reasonController.text}');
+        // Add to Firestore notifications
+        await _firestore.collection('user').doc(widget.userId).collection('notifications').add({
+          'type': 'admin',
+          'message': 'Your account has been banned. Reason: ${reasonController.text}',
+          'createdAt': Timestamp.now(),
+          'isRead': false,
+        });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User banned')));
         _loadUserData();
       } catch (e) {
@@ -170,6 +192,13 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
       try {
         final playerIds = List<String>.from(_userData?['playerIds'] ?? []);
         await sendNotification(playerIds, '${_titleController.text}: ${_messageController.text}');
+        // Add to Firestore notifications
+        await _firestore.collection('user').doc(widget.userId).collection('notifications').add({
+          'type': 'admin',
+          'message': '${_titleController.text}: ${_messageController.text}',
+          'createdAt': Timestamp.now(),
+          'isRead': false,
+        });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification sent')));
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -210,7 +239,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
               const Text('Connected Caretaker:'),
               Text('Name: ${_caretakerData?['fullName']}'),
               Text('Type: ${_caretakerData?['caregiverType']}'),
-              // Add more caretaker details as needed
             ],
           ],
         ),

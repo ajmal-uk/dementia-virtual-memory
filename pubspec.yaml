@@ -37,6 +37,8 @@ dependencies:
   foundation: ^0.0.5
   image: ^4.5.4
   typed_data: ^1.4.0
+  google_maps_flutter: ^2.13.1
+  geolocator: ^14.0.2
   
 
 

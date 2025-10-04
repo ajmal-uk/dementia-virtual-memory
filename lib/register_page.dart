@@ -6,6 +6,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'careTaker/caretaker_bottom_nav.dart';
+import 'user/user_bottom_nav.dart';
 
 enum CaregiverType { relative, nurse }
 enum UserGender { male, female, other }
@@ -120,65 +124,79 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _validateCurrentSection() {
     switch (_currentSection) {
       case FormSection.personal:
-        if (nameController.text.trim().isEmpty ||
-            usernameController.text.trim().isEmpty ||
-            emailController.text.trim().isEmpty ||
-            passwordController.text.trim().isEmpty ||
-            phoneController.text.trim().isEmpty ||
-            _selectedDOB == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please fill in all personal information fields.'),
-            ),
-          );
+        if (nameController.text.trim().isEmpty) {
+          _showErrorDialog('Full Name is required');
+          return false;
+        }
+        if (usernameController.text.trim().isEmpty) {
+          _showErrorDialog('Username is required');
+          return false;
+        }
+        if (emailController.text.trim().isEmpty) {
+          _showErrorDialog('Email is required');
+          return false;
+        }
+        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim())) {
+          _showErrorDialog('Please enter a valid email address');
+          return false;
+        }
+        if (passwordController.text.trim().isEmpty) {
+          _showErrorDialog('Password is required');
+          return false;
+        }
+        if (passwordController.text.length < 6) {
+          _showErrorDialog('Password must be at least 6 characters long');
+          return false;
+        }
+        if (phoneController.text.trim().isEmpty) {
+          _showErrorDialog('Phone number is required');
+          return false;
+        }
+        if (_selectedDOB == null) {
+          _showErrorDialog('Date of Birth is required');
           return false;
         }
         return true;
       case FormSection.address:
-        if (bioController.text.trim().isEmpty ||
-            localityController.text.trim().isEmpty ||
-            cityController.text.trim().isEmpty ||
-            stateController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please fill in all address fields.'),
-            ),
-          );
+        if (bioController.text.trim().isEmpty) {
+          _showErrorDialog('Bio is required');
+          return false;
+        }
+        if (localityController.text.trim().isEmpty) {
+          _showErrorDialog('Locality is required');
+          return false;
+        }
+        if (cityController.text.trim().isEmpty) {
+          _showErrorDialog('City is required');
+          return false;
+        }
+        if (stateController.text.trim().isEmpty) {
+          _showErrorDialog('State is required');
           return false;
         }
         return true;
       case FormSection.caretaker:
         if (_caregiverType == CaregiverType.relative) {
           if (relationController.text.trim().isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Please enter your relation to the patient.'),
-              ),
-            );
+            _showErrorDialog('Please enter your relation to the patient');
             return false;
           }
         } else if (_caregiverType == CaregiverType.nurse) {
-          if (experienceYearsController.text.trim().isEmpty ||
-              expBioController.text.trim().isEmpty ||
-              gradNursingController.text.trim().isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Please complete all nurse-specific experience fields.',
-                ),
-              ),
-            );
+          if (experienceYearsController.text.trim().isEmpty) {
+            _showErrorDialog('Experience years is required for nurses');
+            return false;
+          }
+          if (expBioController.text.trim().isEmpty) {
+            _showErrorDialog('Experience bio is required for nurses');
+            return false;
+          }
+          if (gradNursingController.text.trim().isEmpty) {
+            _showErrorDialog('Nursing qualification is required for nurses');
             return false;
           }
           // Certificate validation for nurses
           if (_selectedCertificatePath == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Please upload your graduation certificate as a nurse.',
-                ),
-              ),
-            );
+            _showErrorDialog('Graduation certificate is required for nurse registration');
             return false;
           }
         }
@@ -186,6 +204,50 @@ class _RegisterPageState extends State<RegisterPage> {
       case FormSection.review:
         return true;
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Validation Error'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Success'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -202,6 +264,7 @@ class _RegisterPageState extends State<RegisterPage> {
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
+            dialogBackgroundColor: Colors.white,
           ),
           child: child!,
         );
@@ -240,13 +303,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (cloudName == null || cloudName.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Error: CLOUDINARY_CLOUD_NAME missing or empty in .env',
-            ),
-          ),
-        );
+        _showErrorDialog('Cloudinary configuration error. Please try again later.');
       }
       return null;
     }
@@ -287,6 +344,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       final username = usernameController.text.trim();
+      final email = emailController.text.trim();
       final phone = phoneController.text.trim();
 
       // Check for existing username
@@ -294,13 +352,18 @@ class _RegisterPageState extends State<RegisterPage> {
           .collection(widget.role)
           .where('username', isEqualTo: username)
           .get();
-      if (snapUsername.docs.isNotEmpty) throw 'Username already exists';
+      if (snapUsername.docs.isNotEmpty) {
+        throw 'Username "$username" is already taken. Please choose a different username.';
+      }
 
-      final snapPhone = await _firestore
+      // Check for existing email
+      final snapEmail = await _firestore
           .collection(widget.role)
-          .where('phoneNo', isEqualTo: phone)
+          .where('email', isEqualTo: email)
           .get();
-      if (snapPhone.docs.isNotEmpty) throw 'Phone number already exists';
+      if (snapEmail.docs.isNotEmpty) {
+        throw 'Email "$email" is already registered. Please use a different email or try logging in.';
+      }
 
       // Upload profile image or use default
       if (_selectedProfileImagePath != null) {
@@ -309,7 +372,6 @@ class _RegisterPageState extends State<RegisterPage> {
           'care_taker_image',
         );
       } else {
-        // Use default profile image if none selected
         profileUrl = defaultProfileImageUrl;
       }
 
@@ -320,24 +382,26 @@ class _RegisterPageState extends State<RegisterPage> {
           'graduation',
         );
         
-        // Double check certificate upload for nurses
         if (certificateUrl == null) {
           throw 'Failed to upload graduation certificate. Please try again.';
         }
       }
 
       final credential = await _auth.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
+        email: email,
         password: passwordController.text.trim(),
       );
       final uid = credential.user?.uid;
 
       if (uid != null) {
+        // Associate device with user in OneSignal
+        OneSignal.login(uid);
+
         Map<String, dynamic> data = {
           'uid': uid,
           'fullName': nameController.text.trim(),
           'username': username,
-          'email': emailController.text.trim(),
+          'email': email,
           'phoneNo': phone,
           'createdAt': Timestamp.now(),
           'gender': _selectedGender.name,
@@ -346,7 +410,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'locality': localityController.text.trim(),
           'city': cityController.text.trim(),
           'state': stateController.text.trim(),
-          'profileImageUrl': profileUrl ?? defaultProfileImageUrl, // Ensure default is used
+          'profileImageUrl': profileUrl!,
           'isConnected': false,
           'currentConnectionId': null,
           'emergencyContacts': [],
@@ -387,22 +451,54 @@ class _RegisterPageState extends State<RegisterPage> {
           });
         }
 
+        // Save role to shared preferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('lastRole', widget.role);
+
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration successful')),
+          _showSuccessDialog('Registration successful! Welcome to DVMA.');
+          
+          Widget targetScreen = const SizedBox(); 
+          
+          if (widget.role == 'user') {
+            targetScreen = const UserBottomNav();
+          } else if (widget.role == 'caretaker') {
+            targetScreen = const CareTaker();
+          }
+          
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => targetScreen),
+            (route) => false,
           );
         }
-        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        String message = e.toString().contains('firebase_auth')
-            ? (e as FirebaseAuthException).message ?? e.toString()
-            : e.toString();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: $message')),
-        );
+        String message = 'Registration failed. Please try again.';
+        
+        if (e is FirebaseAuthException) {
+          switch (e.code) {
+            case 'email-already-in-use':
+              message = 'This email is already registered. Please use a different email or try logging in.';
+              break;
+            case 'weak-password':
+              message = 'Password is too weak. Please choose a stronger password.';
+              break;
+            case 'invalid-email':
+              message = 'The email address is invalid. Please check and try again.';
+              break;
+            case 'operation-not-allowed':
+              message = 'Email/password accounts are not enabled. Please contact support.';
+              break;
+            default:
+              message = 'Authentication error: ${e.message}';
+          }
+        } else if (e is String) {
+          message = e;
+        }
+        
+        _showErrorDialog(message);
       }
     } finally {
       setState(() => _loading = false);
@@ -416,38 +512,63 @@ class _RegisterPageState extends State<RegisterPage> {
     required IconData icon,
     bool isRequired = false,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? Colors.green : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
+        ),
+        color: isSelected ? Colors.green.withOpacity(0.05) : Colors.white,
+      ),
       child: InkWell(
         onTap: onTap,
-        child: InputDecorator(
-          decoration: _inputDecoration(
-            isRequired ? '$label *' : label, 
-            icon
-          ).copyWith(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 18,
-            ),
-            fillColor: isSelected ? Colors.green.withOpacity(0.1) : Colors.white,
-          ),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Flexible(
-                child: Text(
-                  isSelected ? '$label Uploaded' : 'Click to Upload $label',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: isSelected ? Colors.green : Colors.black54,
-                  ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.green : Colors.blueAccent.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  color: isSelected ? Colors.white : Colors.blueAccent,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isRequired ? '$label *' : label,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isSelected ? 'File selected ✓' : 'Tap to select file',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isSelected ? Colors.green : Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Icon(
-                isSelected ? Icons.check_circle : Icons.upload_file,
-                color: isSelected ? Colors.green : Colors.blueAccent,
+                isSelected ? Icons.check_circle : Icons.arrow_forward_ios,
+                color: isSelected ? Colors.green : Colors.grey.shade400,
+                size: 20,
               ),
             ],
           ),
@@ -456,10 +577,19 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildRadio(CaregiverType value, String title) {
-    return Expanded(
+  Widget _buildRadio(CaregiverType value, String title, String description) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _caregiverType == value ? Colors.blueAccent : Colors.grey.shade300,
+          width: _caregiverType == value ? 2 : 1,
+        ),
+        color: _caregiverType == value ? Colors.blueAccent.withOpacity(0.05) : Colors.white,
+      ),
       child: ListTile(
-        title: Text(title, style: const TextStyle(fontSize: 14)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Radio<CaregiverType>(
           value: value,
           groupValue: _caregiverType,
@@ -470,26 +600,43 @@ class _RegisterPageState extends State<RegisterPage> {
           },
           activeColor: Colors.blueAccent,
         ),
-        contentPadding: EdgeInsets.zero,
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade800,
+          ),
+        ),
+        subtitle: Text(
+          description,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildGenderRadio(UserGender value, String title) {
-    return Expanded(
-      child: ListTile(
-        title: Text(title, style: const TextStyle(fontSize: 14)),
-        leading: Radio<UserGender>(
-          value: value,
-          groupValue: _selectedGender,
-          onChanged: (UserGender? selectedValue) {
-            setState(() {
-              _selectedGender = selectedValue!;
-            });
-          },
-          activeColor: Colors.blueAccent,
-        ),
-        contentPadding: EdgeInsets.zero,
+  Widget _buildGenderChip(UserGender value, String title) {
+    final isSelected = _selectedGender == value;
+    return ChoiceChip(
+      label: Text(title),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _selectedGender = value;
+        });
+      },
+      selectedColor: Colors.blueAccent,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.grey.shade700,
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Colors.grey.shade100,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
       ),
     );
   }
@@ -505,48 +652,70 @@ class _RegisterPageState extends State<RegisterPage> {
 
     return Column(
       children: [
-        // Progress bar
-        LinearProgressIndicator(
-          value: (currentIndex + 1) / totalSections,
-          backgroundColor: Colors.grey[300],
-          color: Colors.blueAccent,
+        // Progress bar with percentage
+        Stack(
+          children: [
+            LinearProgressIndicator(
+              value: (currentIndex + 1) / totalSections,
+              backgroundColor: Colors.grey.shade200,
+              color: Colors.blueAccent,
+              borderRadius: BorderRadius.circular(10),
+              minHeight: 8,
+            ),
+            Positioned(
+              right: 0,
+              child: Text(
+                '${((currentIndex + 1) / totalSections * 100).round()}%',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         // Section labels
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: sections.asMap().entries.map((entry) {
             final index = entry.key;
             final section = entry.value;
-            return Column(
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: index <= currentIndex ? Colors.blueAccent : Colors.grey[300],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: TextStyle(
-                        color: index <= currentIndex ? Colors.white : Colors.grey[600],
-                        fontWeight: FontWeight.bold,
+            final isActive = index <= currentIndex;
+            final isCurrent = index == currentIndex;
+            
+            return Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: isActive ? Colors.blueAccent : Colors.grey.shade300,
+                      shape: BoxShape.circle,
+                      border: isCurrent ? Border.all(color: Colors.blueAccent, width: 3) : null,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        isActive ? Icons.check : Icons.circle,
+                        color: isActive ? Colors.white : Colors.grey.shade600,
+                        size: isActive ? 18 : 16,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  section,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: index == currentIndex ? FontWeight.bold : FontWeight.normal,
-                    color: index == currentIndex ? Colors.blueAccent : Colors.grey[600],
+                  const SizedBox(height: 8),
+                  Text(
+                    section,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                      color: isCurrent ? Colors.blueAccent : Colors.grey.shade600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           }).toList(),
         ),
@@ -560,28 +729,25 @@ class _RegisterPageState extends State<RegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Personal Information',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.blueAccent,
-          ),
+        _buildSectionHeader(
+          title: 'Personal Information',
+          subtitle: 'Tell us about yourself',
+          icon: Icons.person_outline,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         _buildTextField(nameController, 'Full Name', Icons.person),
         _buildTextField(usernameController, 'Username', Icons.alternate_email),
-        _buildTextField(emailController, 'Email', Icons.email),
+        _buildTextField(emailController, 'Email Address', Icons.email_outlined),
         _buildTextField(
           passwordController,
           'Password',
-          Icons.lock,
+          Icons.lock_outline,
           obscureText: true,
         ),
         _buildTextField(
           phoneController,
           'Phone Number',
-          Icons.phone,
+          Icons.phone_iphone,
           keyboardType: TextInputType.phone,
         ),
 
@@ -590,48 +756,87 @@ class _RegisterPageState extends State<RegisterPage> {
           label: 'Profile Image',
           onTap: _pickProfileImage,
           isSelected: _selectedProfileImagePath != null,
-          icon: Icons.person_pin,
+          icon: Icons.camera_alt,
         ),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 16),
-          child: Text(
-            '* If no profile image is selected, a default image will be used',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-              fontStyle: FontStyle.italic,
-            ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blueAccent, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Optional - Default image will be used if not selected',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
 
         // Gender Selection
         const SizedBox(height: 8),
-        const Text(
-          'Gender:',
-          style: TextStyle(fontSize: 16, color: Colors.black87),
+        Text(
+          'Gender *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700,
+          ),
         ),
+        const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            _buildGenderRadio(UserGender.male, 'Male'),
-            _buildGenderRadio(UserGender.female, 'Female'),
-            _buildGenderRadio(UserGender.other, 'Other'),
+            _buildGenderChip(UserGender.male, 'Male'),
+            const SizedBox(width: 12),
+            _buildGenderChip(UserGender.female, 'Female'),
+            const SizedBox(width: 12),
+            _buildGenderChip(UserGender.other, 'Other'),
           ],
         ),
 
         // Date of Birth Picker
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16, top: 8),
-          child: InkWell(
-            onTap: () => _selectDate(context),
-            child: InputDecorator(
-              decoration: _inputDecoration('Date of Birth', Icons.calendar_today),
-              child: Text(
-                _selectedDOB == null
-                    ? 'Select Date of Birth'
-                    : '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}',
-                style: const TextStyle(fontSize: 16),
-              ),
+        const SizedBox(height: 16),
+        Text(
+          'Date of Birth *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () => _selectDate(context),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+              color: Colors.white,
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today, color: Colors.blueAccent, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  _selectedDOB == null
+                      ? 'Select your date of birth'
+                      : '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _selectedDOB == null ? Colors.grey.shade500 : Colors.grey.shade800,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.arrow_drop_down, color: Colors.grey.shade500),
+              ],
             ),
           ),
         ),
@@ -644,24 +849,21 @@ class _RegisterPageState extends State<RegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Address Information',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.blueAccent,
-          ),
+        _buildSectionHeader(
+          title: 'Address Information',
+          subtitle: 'Where are you located?',
+          icon: Icons.location_on_outlined,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         _buildTextField(
           bioController,
-          'Bio (Tell us about yourself)',
-          Icons.info_outline,
+          'Bio',
+          Icons.description_outlined,
           maxLines: 3,
         ),
-        _buildTextField(localityController, 'Locality', Icons.location_on),
-        _buildTextField(cityController, 'City', Icons.location_city),
-        _buildTextField(stateController, 'State', Icons.public),
+        _buildTextField(localityController, 'Locality/Area', Icons.location_on_outlined),
+        _buildTextField(cityController, 'City', Icons.location_city_outlined),
+        _buildTextField(stateController, 'State', Icons.public_outlined),
       ],
     );
   }
@@ -671,71 +873,83 @@ class _RegisterPageState extends State<RegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Caretaker Details',
+        _buildSectionHeader(
+          title: 'Caretaker Details',
+          subtitle: 'Tell us about your caregiving experience',
+          icon: Icons.medical_services_outlined,
+        ),
+        const SizedBox(height: 24),
+
+        // Caregiver Type Selection
+        Text(
+          'I am registering as a: *',
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.blueAccent,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700,
           ),
         ),
-        const SizedBox(height: 16),
-
-        // Caregiver Type Radio Button Selection
-        const Text(
-          'I am registering as a:',
-          style: TextStyle(fontSize: 16, color: Colors.black87),
+        const SizedBox(height: 12),
+        _buildRadio(
+          CaregiverType.relative,
+          'Family Relative',
+          'Caring for a family member or relative',
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            _buildRadio(CaregiverType.relative, 'Relative'),
-            _buildRadio(CaregiverType.nurse, 'Nurse'),
-          ],
+        _buildRadio(
+          CaregiverType.nurse,
+          'Professional Nurse',
+          'Registered nurse with professional qualifications',
         ),
         const SizedBox(height: 16),
 
-        // Conditional Input Field
+        // Conditional Input Fields
         if (_caregiverType == CaregiverType.relative) ...[
           _buildTextField(
             relationController,
             'Relation to Patient',
-            Icons.family_restroom,
+            Icons.family_restroom_outlined,
           ),
         ] else ...[
           _buildTextField(
             experienceYearsController,
-            'Experience Years (in years)',
-            Icons.work_history,
+            'Years of Experience',
+            Icons.work_history_outlined,
             keyboardType: TextInputType.number,
           ),
           _buildTextField(
             expBioController,
-            'Experience Bio',
-            Icons.description,
+            'Professional Experience',
+            Icons.description_outlined,
             maxLines: 3,
           ),
           _buildTextField(
             gradNursingController,
-            'Nursing Qualification/Graduation',
-            Icons.school,
+            'Nursing Qualification',
+            Icons.school_outlined,
           ),
           _buildFilePicker(
-            label: 'Graduation Certificate (Image)',
+            label: 'Graduation Certificate',
             onTap: _pickCertificate,
             isSelected: _selectedCertificatePath != null,
-            icon: Icons.note_alt,
+            icon: Icons.assignment_outlined,
             isRequired: true,
           ),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: Text(
-              '* Graduation certificate is required for nurse registration',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.red,
-                fontStyle: FontStyle.italic,
-              ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_outlined, color: Colors.orange, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Graduation certificate is required for nurse registration',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -748,32 +962,31 @@ class _RegisterPageState extends State<RegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Review Information',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.blueAccent,
-          ),
+        _buildSectionHeader(
+          title: 'Review Information',
+          subtitle: 'Please verify all details before submitting',
+          icon: Icons.verified_user_outlined,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         
         // Personal Info Review
+        _buildReviewSectionTitle('Personal Information'),
         _buildReviewItem('Full Name', nameController.text),
         _buildReviewItem('Username', usernameController.text),
         _buildReviewItem('Email', emailController.text),
         _buildReviewItem('Phone', phoneController.text),
-        _buildReviewItem('Gender', _selectedGender.name),
+        _buildReviewItem('Gender', _selectedGender.name.toUpperCase()),
         _buildReviewItem('Date of Birth', 
           _selectedDOB != null 
             ? '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}'
             : 'Not selected'
         ),
         _buildReviewItem('Profile Image', 
-          _selectedProfileImagePath != null ? 'Uploaded' : 'Default image will be used'
+          _selectedProfileImagePath != null ? 'Uploaded' : 'Default image'
         ),
         
         // Address Info Review
+        _buildReviewSectionTitle('Address Information'),
         _buildReviewItem('Bio', bioController.text),
         _buildReviewItem('Locality', localityController.text),
         _buildReviewItem('City', cityController.text),
@@ -781,35 +994,113 @@ class _RegisterPageState extends State<RegisterPage> {
         
         // Caretaker Specific Review
         if (widget.role == 'caretaker') ...[
-          _buildReviewItem('Caregiver Type', _caregiverType.name),
+          _buildReviewSectionTitle('Caretaker Details'),
+          _buildReviewItem('Caregiver Type', 
+            _caregiverType == CaregiverType.relative ? 'Family Relative' : 'Professional Nurse'
+          ),
           if (_caregiverType == CaregiverType.relative)
-            _buildReviewItem('Relation', relationController.text),
+            _buildReviewItem('Relation to Patient', relationController.text),
           if (_caregiverType == CaregiverType.nurse) ...[
-            _buildReviewItem('Experience Years', experienceYearsController.text),
-            _buildReviewItem('Experience Bio', expBioController.text),
+            _buildReviewItem('Years of Experience', '${experienceYearsController.text} years'),
+            _buildReviewItem('Professional Experience', expBioController.text),
             _buildReviewItem('Nursing Qualification', gradNursingController.text),
             _buildReviewItem('Graduation Certificate', 
-              _selectedCertificatePath != null ? 'Uploaded' : 'Not uploaded'
+              _selectedCertificatePath != null ? 'Uploaded ✓' : 'Not uploaded'
             ),
           ]
         ],
         
-        const SizedBox(height: 16),
-        Text(
-          'Please review your information before submitting.',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-            fontStyle: FontStyle.italic,
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blueAccent.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blueAccent.withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blueAccent, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'By submitting, you agree to our Terms of Service and Privacy Policy',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildReviewItem(String label, String value) {
+  Widget _buildSectionHeader({required String title, required String subtitle, required IconData icon}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blueAccent.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: Colors.blueAccent, size: 24),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(top: 16, bottom: 12),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Colors.blueAccent,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewItem(String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -818,7 +1109,7 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Text(
               '$label:',
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w500,
                 color: Colors.black87,
               ),
             ),
@@ -828,7 +1119,7 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Text(
               value.isEmpty ? 'Not provided' : value,
               style: TextStyle(
-                color: value.isEmpty ? Colors.grey : Colors.black54,
+                color: value.isEmpty ? Colors.grey.shade500 : Colors.grey.shade800,
               ),
             ),
           ),
@@ -842,51 +1133,102 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text('Register as ${widget.role.toUpperCase()}'),
+        title: Text(
+          'Register as ${widget.role == 'caretaker' ? 'Caregiver' : 'User'}',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: Colors.blueAccent,
         elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blueAccent.withOpacity(0.1), Colors.white],
+            colors: [
+              Colors.blueAccent,
+              Color(0xFFE3F2FD),
+              Colors.white,
+            ],
+            stops: [0.0, 0.2, 0.2],
           ),
         ),
         child: Column(
           children: [
             // Progress Indicator
-            Padding(
+            Container(
               padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: _buildProgressIndicator(),
             ),
 
             // Form Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_currentSection == FormSection.personal)
-                      _buildPersonalSection(),
-                    if (_currentSection == FormSection.address)
-                      _buildAddressSection(),
-                    if (_currentSection == FormSection.caretaker)
-                      _buildCaretakerSection(),
-                    if (_currentSection == FormSection.review)
-                      _buildReviewSection(),
-
-                    const SizedBox(height: 32),
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 5),
+                    ),
                   ],
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_currentSection == FormSection.personal)
+                        _buildPersonalSection(),
+                      if (_currentSection == FormSection.address)
+                        _buildAddressSection(),
+                      if (_currentSection == FormSection.caretaker)
+                        _buildCaretakerSection(),
+                      if (_currentSection == FormSection.review)
+                        _buildReviewSection(),
+
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
               ),
             ),
 
             // Navigation Buttons
             Container(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
               child: Row(
                 children: [
                   // Back Button
@@ -899,10 +1241,21 @@ class _RegisterPageState extends State<RegisterPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          side: BorderSide(color: Colors.blueAccent),
                         ),
-                        child: const Text(
-                          'Back',
-                          style: TextStyle(fontSize: 16),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.arrow_back_ios, size: 16),
+                            SizedBox(width: 8),
+                            Text(
+                              'Back',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.blueAccent,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -912,9 +1265,21 @@ class _RegisterPageState extends State<RegisterPage> {
                   // Next/Submit Button
                   Expanded(
                     child: _loading
-                        ? const Center(
-                            child: CircularProgressIndicator(
+                        ? Container(
+                            height: 56,
+                            decoration: BoxDecoration(
                               color: Colors.blueAccent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
                             ),
                           )
                         : ElevatedButton(
@@ -925,15 +1290,29 @@ class _RegisterPageState extends State<RegisterPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
+                              elevation: 2,
                             ),
-                            child: Text(
-                              _currentSection == FormSection.review
-                                  ? 'Submit'
-                                  : 'Next',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _currentSection == FormSection.review
+                                      ? 'Complete Registration'
+                                      : 'Continue',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                if (_currentSection != FormSection.review)
+                                  const Row(
+                                    children: [
+                                      SizedBox(width: 8),
+                                      Icon(Icons.arrow_forward_ios, size: 16),
+                                    ],
+                                  ),
+                              ],
                             ),
                           ),
                   ),
@@ -954,25 +1333,43 @@ class _RegisterPageState extends State<RegisterPage> {
     TextInputType? keyboardType,
     int maxLines = 1,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
         maxLines: maxLines,
-        decoration: _inputDecoration(label, icon),
         obscureText: obscureText,
         keyboardType: keyboardType,
+        style: TextStyle(
+          fontSize: 16,
+          color: Colors.grey.shade800,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(
+            color: Colors.grey.shade600,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          prefixIcon: Icon(
+            icon,
+            color: Colors.blueAccent,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
       ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      filled: true,
-      fillColor: Colors.white,
-      prefixIcon: Icon(icon, color: Colors.blueAccent),
     );
   }
 }

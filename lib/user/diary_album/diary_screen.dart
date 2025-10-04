@@ -229,11 +229,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
     final itemCount = _diaries.length + (_hasToday ? 0 : 1);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daily Diary'),
-        backgroundColor: Colors.blueAccent,
-        elevation: 0,
-      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

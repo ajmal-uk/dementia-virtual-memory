@@ -18,14 +18,11 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Listen for search input changes
     _searchController.addListener(
       () => setState(() => _search = _searchController.text.toLowerCase()),
     );
   }
 
-  /// Get caretakers stream ordered by fullName
   Stream<QuerySnapshot> _getCaretakersStream() {
     return FirebaseFirestore.instance
         .collection('caretaker')
@@ -65,7 +62,6 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
         ),
         child: Column(
           children: [
-            /// Search Field
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: TextField(
@@ -82,8 +78,6 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                 ),
               ),
             ),
-
-            /// Choice Chips (Tabs)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -104,8 +98,6 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                 ),
               ],
             ),
-
-            /// Caretakers List
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _getCaretakersStream(),
@@ -118,14 +110,10 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                   }
 
                   final docs = snapshot.data?.docs ?? [];
-
-                  // Filter based on approval status
                   final approveFiltered = docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     return data['isApprove'] == (_selectedTab == 'Approved');
                   }).toList();
-
-                  // Filter based on search text
                   final filteredDocs = approveFiltered.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final username =

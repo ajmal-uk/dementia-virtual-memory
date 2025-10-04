@@ -17,13 +17,11 @@ class _BannedUsersScreenState extends State<BannedUsersScreen> {
   void initState() {
     super.initState();
 
-    // Listen for search input changes
     _searchController.addListener(
       () => setState(() => _search = _searchController.text.toLowerCase()),
     );
   }
 
-  /// Get banned users stream ordered by fullName
   Stream<QuerySnapshot> _getBannedUsersStream() {
     return FirebaseFirestore.instance
         .collection('user')
@@ -31,7 +29,6 @@ class _BannedUsersScreenState extends State<BannedUsersScreen> {
         .snapshots();
   }
 
-  /// Unban a user with confirmation
   Future<void> _unbanUser(String id) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -72,7 +69,6 @@ class _BannedUsersScreenState extends State<BannedUsersScreen> {
       appBar: AppBar(title: const Text('Banned Users')),
       body: Column(
         children: [
-          /// Search Field
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -90,7 +86,6 @@ class _BannedUsersScreenState extends State<BannedUsersScreen> {
             ),
           ),
 
-          /// List of Banned Users
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _getBannedUsersStream(),
@@ -103,14 +98,11 @@ class _BannedUsersScreenState extends State<BannedUsersScreen> {
                 }
 
                 final docs = snapshot.data?.docs ?? [];
-
-                // Filter only banned users
                 final bannedDocs = docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   return data['isBanned'] == true;
                 }).toList();
 
-                // Filter by search input
                 final filteredDocs = bannedDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final username =

@@ -27,6 +27,8 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
     }
 
     List<String> playerIds = [];
+    final message = '${_titleController.text}: ${_messageController.text}';
+
     if (_isIndividual) {
       final coll = _isUser ? 'user' : 'caretaker';
       final snap = await FirebaseFirestore.instance.collection(coll).where('username', isEqualTo: _usernameController.text.trim()).get();
@@ -37,22 +39,43 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
         return;
       }
       playerIds = List<String>.from(snap.docs.first.data()['playerIds'] ?? []);
+      // Add to Firestore notifications for individual
+      await snap.docs.first.reference.collection('notifications').add({
+        'type': 'admin',
+        'message': message,
+        'createdAt': Timestamp.now(),
+        'isRead': false,
+      });
     } else {
       if (_isPatient) {
         final snap = await FirebaseFirestore.instance.collection('user').get();
         for (var doc in snap.docs) {
           playerIds.addAll(List<String>.from(doc.data()['playerIds'] ?? []));
+          // Add to Firestore notifications for each user
+          await doc.reference.collection('notifications').add({
+            'type': 'admin',
+            'message': message,
+            'createdAt': Timestamp.now(),
+            'isRead': false,
+          });
         }
       }
       if (_isCaretaker) {
         final snap = await FirebaseFirestore.instance.collection('caretaker').get();
         for (var doc in snap.docs) {
           playerIds.addAll(List<String>.from(doc.data()['playerIds'] ?? []));
+          // Add to Firestore notifications for each caretaker
+          await doc.reference.collection('notifications').add({
+            'type': 'admin',
+            'message': message,
+            'createdAt': Timestamp.now(),
+            'isRead': false,
+          });
         }
       }
     }
 
-    await sendNotification(playerIds, '${_titleController.text}: ${_messageController.text}');
+    await sendNotification(playerIds, message);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification sent')));
     }
