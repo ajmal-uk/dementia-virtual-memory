@@ -7,7 +7,7 @@ Future<void> sendNotification(List<String> playerIds, String content) async {
   if (playerIds.isEmpty) return;
 
   const appId = '73673a14-2de9-44c4-a9c5-dd531da39b59';
-  const apiKey = 'os_v2_app_onttufbn5fcmjkof3vjr3i43lhrirnuaeujum3mksb5gtjrhjnq7fj2wbm4rjwmg3kyo4ikoqvmiyv5rm5pxgqjx46gd37w3fvc2yey';
+  const apiKey = 'os_v2_app_onttufbn5fcmjkof3vjr3i43lfxi2bnfivyeki4nrswqzdu7bsf4qk7wh67lkpwfs6acdpnjaemq7kdj6pbtwrgrver3yacqwjqnf4y';
 
   try {
     final response = await http.post(
@@ -26,6 +26,8 @@ Future<void> sendNotification(List<String> playerIds, String content) async {
 
     if (response.statusCode != 200) {
       print('Failed to send notification: ${response.statusCode} - ${response.body}');
+    } else {
+      print('Notification sent successfully: ${response.body}');
     }
   } catch (e) {
     print('Error sending notification: $e');
@@ -36,7 +38,7 @@ Future<void> scheduleNotification(List<String> playerIds, String content, DateTi
   if (playerIds.isEmpty) return;
 
   const appId = '73673a14-2de9-44c4-a9c5-dd531da39b59';
-  const apiKey = 'os_v2_app_onttufbn5fcmjkof3vjr3i43lhrirnuaeujum3mksb5gtjrhjnq7fj2wbm4rjwmg3kyo4ikoqvmiyv5rm5pxgqjx46gd37w3fvc2yey';
+  const apiKey = 'os_v2_app_onttufbn5fcmjkof3vjr3i43lfxi2bnfivyeki4nrswqzdu7bsf4qk7wh67lkpwfs6acdpnjaemq7kdj6pbtwrgrver3yacqwjqnf4y';
 
   final formattedTime = DateFormat('yyyy-MM-dd HH:mm:ss').format(scheduledTime.toUtc()) + ' UTC';
 
@@ -58,6 +60,8 @@ Future<void> scheduleNotification(List<String> playerIds, String content, DateTi
 
     if (response.statusCode != 200) {
       print('Failed to schedule notification: ${response.statusCode} - ${response.body}');
+    } else {
+      print('Notification scheduled successfully: ${response.body}');
     }
   } catch (e) {
     print('Error scheduling notification: $e');
