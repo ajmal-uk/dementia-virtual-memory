@@ -1,4 +1,5 @@
 // lib/login_page.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -55,10 +56,12 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Associate device with user
-      OneSignal.login(uid);
+      try {
+        await OneSignal.login(uid);
+      } catch (e) {
+        debugPrint('OneSignal login failed during login: $e');
+      }
 
-      // Try getting document by UID first
       DocumentSnapshot<Map<String, dynamic>> docByUid = await _firestore
           .collection(widget.role)
           .doc(uid)
@@ -166,7 +169,7 @@ class _LoginPageState extends State<LoginPage> {
             break;
           case 'wrong-password':
             title = 'Incorrect Password';
-            message = 'The password you entered is incorrect. Please try again or use "Forgot Password" to reset it.';
+            message = 'The password you entered is incorrect. Please try again or use \"Forgot Password\" to reset it.';
             break;
           case 'invalid-email':
             title = 'Invalid Email';

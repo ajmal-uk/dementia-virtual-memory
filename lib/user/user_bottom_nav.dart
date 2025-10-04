@@ -1,4 +1,4 @@
-// lib/user/user_bottom_nav.dart (Updated with better location handling)
+// lib/user/user_bottom_nav.dart
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -18,28 +18,24 @@ class UserBottomNav extends StatefulWidget {
 }
 
 class _UserBottomNavState extends State<UserBottomNav> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    const FamilyScreen(),
-    const CaretakerScreen(),
-    const UserProfile(),
-    const DiaryAlbumScreen(),
-  ];
-
+  int _selectedIndex = 2; // Start with Home (center)
   final PatientLocationService _locationService = PatientLocationService();
   StreamSubscription<DocumentSnapshot>? _connectionSubscription;
   bool _isConnected = false;
+
+  final List<Widget> _pages = [
+    const FamilyScreen(),
+    const CaretakerScreen(),
+    const HomeScreen(),
+    const DiaryAlbumScreen(),
+    const UserProfile(),
+  ];
 
   Future<void> _checkBanned() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('user')
-        .doc(uid)
-        .get();
+    final doc = await FirebaseFirestore.instance.collection('user').doc(uid).get();
 
     if (doc.data()?['isBanned'] == true) {
       if (!mounted) return;
@@ -76,17 +72,13 @@ class _UserBottomNavState extends State<UserBottomNav> {
       if (snapshot.exists) {
         final data = snapshot.data();
         final newConnectionStatus = data?['isConnected'] == true;
-        
+
         if (newConnectionStatus != _isConnected) {
-          setState(() {
-            _isConnected = newConnectionStatus;
-          });
-          
+          setState(() => _isConnected = newConnectionStatus);
+
           if (newConnectionStatus) {
-            // Start location sharing when connected
             _startLocationSharing();
           } else {
-            // Stop location sharing when disconnected
             _stopLocationSharing();
           }
         }
@@ -106,11 +98,6 @@ class _UserBottomNavState extends State<UserBottomNav> {
       }
     } catch (e) {
       debugPrint('Error starting location sharing: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start location sharing: $e')),
-        );
-      }
     }
   }
 
@@ -147,26 +134,78 @@ class _UserBottomNavState extends State<UserBottomNav> {
     super.dispose();
   }
 
+  Widget _buildAnimatedIcon(IconData icon, int index, String label) {
+    final bool isSelected = _selectedIndex == index;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        AnimatedScale(
+          scale: isSelected ? 1.25 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          child: Icon(
+            icon,
+            color: isSelected ? Colors.blueAccent : Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 3),
+        AnimatedOpacity(
+          opacity: isSelected ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 200),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: Colors.blueAccent,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Family'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.manage_accounts),
-            label: 'CareTaker',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Diary'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) => setState(() => _selectedIndex = index),
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          items: [
+            BottomNavigationBarItem(
+              icon: _buildAnimatedIcon(Icons.group, 0, 'Family'),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: _buildAnimatedIcon(Icons.medical_services, 1, 'Care'),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: _buildAnimatedIcon(Icons.home_rounded, 2, 'Home'),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: _buildAnimatedIcon(Icons.book_outlined, 3, 'Diary'),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: _buildAnimatedIcon(Icons.person_rounded, 4, 'Profile'),
+              label: '',
+            ),
+          ],
+        ),
       ),
     );
   }

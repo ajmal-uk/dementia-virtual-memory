@@ -394,8 +394,11 @@ class _RegisterPageState extends State<RegisterPage> {
       final uid = credential.user?.uid;
 
       if (uid != null) {
-        // Associate device with user in OneSignal
-        OneSignal.login(uid);
+        try {
+          OneSignal.login(uid);
+        } catch (e) {
+          debugPrint('OneSignal login failed during registration: $e');
+        }
 
         Map<String, dynamic> data = {
           'uid': uid,

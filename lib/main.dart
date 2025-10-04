@@ -18,28 +18,24 @@ void main() async {
   
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   
-  final oneSignalAppId = dotenv.env['ONESIGNAL_APP_ID']; 
-  if (oneSignalAppId != null) {
+  final oneSignalAppId = "73673a14-2de9-44c4-a9c5-dd531da39b59"; 
      OneSignal.initialize(oneSignalAppId);
      OneSignal.Notifications.requestPermission(true);
-  } else {
-     debugPrint("Error: ONESIGNAL_APP_ID missing in .env");
-  }
 
-  final geminiApiKey = dotenv.env['GEMINI_API_KEY'];
-  if (geminiApiKey != null) {
+  final geminiApiKey = "hhjkljouhnlj";
     Gemini.init(apiKey: geminiApiKey);
-  } else {
-    debugPrint("Error: GEMINI_API_KEY missing in .env");
-  }
 
   final prefs = await SharedPreferences.getInstance();
   final user = FirebaseAuth.instance.currentUser;
   Widget initialScreen = const WelcomePage();
 
   if (user != null) {
-    OneSignal.login(user.uid);
-
+    try {
+      await OneSignal.login(user.uid);
+    } catch (e) {
+      debugPrint('OneSignal login failed in main: $e');
+    }
+  
     final role = prefs.getString('lastRole') ?? 'user';
     if (role == 'user') {
       initialScreen = const UserBottomNav();
