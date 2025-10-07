@@ -297,6 +297,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                           _isAdding
                               ? const CircularProgressIndicator(color: Colors.orange)
                               : FloatingActionButton.extended(
+                                  heroTag: 'add_member',
                                   backgroundColor: Colors.orange,
                                   icon: const Icon(Icons.add, color: Colors.white),
                                   label: const Text('Add Member',
@@ -327,6 +328,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                           _isScanning
                               ? const CircularProgressIndicator(color: Colors.orange)
                               : FloatingActionButton.extended(
+                                  heroTag: 'scan_member',
                                   backgroundColor: Colors.orange,
                                   icon: const Icon(Icons.camera_alt, color: Colors.white),
                                   label:
