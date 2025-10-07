@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -120,17 +119,15 @@ class _EditScreenState extends State<EditScreen> {
     if (_isSaving) return;
     setState(() => _isSaving = true);
 
-    if (mounted) {
-      showDialog(
-        barrierDismissible: false,
-        context: context,
-        builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.blueAccent)),
-      );
-    }
+    final loadingContext = context;
+    showDialog(
+      context: loadingContext,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.blueAccent)),
+    );
 
     try {
       final url = await _uploadImage();
-      if (!mounted) return;
 
       final uid = _auth.currentUser?.uid;
       if (uid == null) throw Exception('User not logged in');
@@ -148,13 +145,17 @@ class _EditScreenState extends State<EditScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      Navigator.pop(context); // Close loading dialog
-      Navigator.pop(context); // Return to family screen
+      if (loadingContext.mounted) {
+        Navigator.pop(loadingContext); 
+      }
+      if(mounted){
+      Navigator.pop(context); 
+      }
     } catch (e) {
       logger.e('Error updating member: $e');
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
+      if (loadingContext.mounted) {
+        Navigator.pop(loadingContext);
+        ScaffoldMessenger.of(loadingContext).showSnackBar(
           SnackBar(content: Text('Error updating: $e')),
         );
       }
