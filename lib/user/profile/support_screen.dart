@@ -1,6 +1,3 @@
-// New File: lib/user/profile/support_screen.dart
-// This is the new Support/Help page that fetches the email from Firestore and allows contacting via email
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';

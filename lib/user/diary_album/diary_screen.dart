@@ -1,5 +1,3 @@
-// lib/user/diary/diary_screen.dart
-// lib/user/diary/diary_screen.dart
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -88,7 +86,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
         });
       }
     } catch (e) {
-      print('Error loading diaries: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -133,7 +130,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(5, 5),
           ),
@@ -234,7 +231,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blueAccent.withOpacity(0.1), Colors.white],
+            colors: [Colors.blueAccent.withValues(alpha: 0.1), Colors.white],
           ),
         ),
         child: itemCount == 0

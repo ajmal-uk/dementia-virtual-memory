@@ -1,4 +1,3 @@
-// lib/user/profile/edit_profile_screen.dart
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -97,7 +96,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'city': _cityController.text.trim(),
           'state': _stateController.text.trim(),
           'dob': _dob != null ? Timestamp.fromDate(_dob!) : null,
-          'gender': _gender?.toLowerCase(), // Ensure lowercase when saving
+          'gender': _gender?.toLowerCase(), 
           'emergencyContacts': _emergencyContacts,
         });
         if (mounted) Navigator.pop(context, true);

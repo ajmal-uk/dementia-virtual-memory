@@ -1,6 +1,3 @@
-// Modified: lib/admin/settings_screen.dart
-// Changes: Added a new ExpansionTile for updating support email in the 'api' collection
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -19,10 +16,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   final _emailController = TextEditingController();
   final _adminPasswordController = TextEditingController();
   final _apiUrlController = TextEditingController();
-  final _supportEmailController = TextEditingController(); // New controller for support email
+  final _supportEmailController = TextEditingController(); 
 
   String? _currentApiUrl;
-  String? _currentSupportEmail; // New variable for current support email
+  String? _currentSupportEmail;
   final String _apiDocId = 'qHsy9xZJJanFlWFDx7ag';
 
   @override
@@ -38,8 +35,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         setState(() {
           _currentApiUrl = doc.data()?['apiURL'];
           _apiUrlController.text = _currentApiUrl ?? '';
-          _currentSupportEmail = doc.data()?['email']; // Fetch support email
-          _supportEmailController.text = _currentSupportEmail ?? ''; // Set controller
+          _currentSupportEmail = doc.data()?['email'];
+          _supportEmailController.text = _currentSupportEmail ?? '';
         });
       } else {
         debugPrint('API document not found.');
@@ -59,7 +56,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     }
 
     try {
-      // only update the existing document (no creation)
+      
       await _firestore.collection('api').doc(_apiDocId).update({
         'apiURL': newUrl,
       });
@@ -72,14 +69,14 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         const SnackBar(content: Text('API URL updated successfully')),
       );
     } catch (e) {
-      // if document doesn't exist, show error instead of creating
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating API URL: $e')),
       );
     }
   }
 
-  // New: Update support email
+  
   Future<void> _updateSupportEmail() async {
     final newEmail = _supportEmailController.text.trim();
     if (newEmail.isEmpty) {
@@ -156,7 +153,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Logout card
+          
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -170,7 +167,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
           const SizedBox(height: 8),
 
-          // Add Admin section
+          
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -205,7 +202,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
           const SizedBox(height: 8),
 
-          // Update API URL section
+          
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -236,7 +233,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
           const SizedBox(height: 8),
 
-          // New: Update Support Email section
+          
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

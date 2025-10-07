@@ -19,8 +19,8 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   
   final oneSignalAppId = "73673a14-2de9-44c4-a9c5-dd531da39b59"; 
-     OneSignal.initialize(oneSignalAppId);
-     OneSignal.Notifications.requestPermission(true);
+    OneSignal.initialize(oneSignalAppId);
+    OneSignal.Notifications.requestPermission(true);
 
   final geminiApiKey = "AIzaSyAZ9H-7y_aWH38HSCrOBbshkLmdLTLGvS4";
     Gemini.init(apiKey: geminiApiKey);
@@ -31,9 +31,9 @@ void main() async {
 
   if (user != null) {
     try {
-      await OneSignal.login(user.uid);
+        await OneSignal.login(user.uid);
     } catch (e) {
-      debugPrint('OneSignal login failed in main: $e');
+        debugPrint('OneSignal login failed in main: $e');
     }
   
     final role = prefs.getString('lastRole') ?? 'user';
@@ -50,12 +50,12 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  final Widget initialScreen;
+final Widget initialScreen;
 
-  const MyApp({super.key, required this.initialScreen});
+const MyApp({super.key, required this.initialScreen});
 
-  @override
-  Widget build(BuildContext context) {
+@override
+Widget build(BuildContext context) {
     return MaterialApp(
       title: 'DVMA',
       debugShowCheckedModeBanner: false,

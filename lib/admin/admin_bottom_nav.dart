@@ -1,4 +1,3 @@
-// admin_bottom_nav.dart
 import 'package:flutter/material.dart';
 import 'users/users_screen.dart';
 import 'caretaker/caretakers_screen.dart';

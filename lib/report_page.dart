@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ReportPage extends StatefulWidget {
-  final String reporterRole; // 'user' or 'caretaker'
+  final String reporterRole; 
   const ReportPage({super.key, required this.reporterRole});
 
   @override
@@ -21,7 +21,7 @@ class _ReportPageState extends State<ReportPage> {
   bool _isLoading = true;
   bool _isConnected = false;
   String? _connectedUsername;
-  bool _reportSpecific = true; // true: report specific user, false: general/app issue
+  bool _reportSpecific = true; 
   bool _userFound = false;
 
   @override

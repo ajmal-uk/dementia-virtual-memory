@@ -1,5 +1,3 @@
-// lib/forgot_password_page.dart
-// lib/forgot_password_page.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -34,7 +32,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // Ensure content resizes when keyboard appears
+      resizeToAvoidBottomInset: true, 
       appBar: AppBar(
         title: const Text('Forgot Password'),
         backgroundColor: Colors.blueAccent,

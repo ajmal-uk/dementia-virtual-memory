@@ -1,4 +1,3 @@
-// notifications_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -62,7 +61,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
         return;
       }
       playerIds = List<String>.from(snap.docs.first.data()['playerIds'] ?? []);
-      // Add to Firestore notifications for individual
       await snap.docs.first.reference.collection('notifications').add({
         'type': 'admin',
         'message': message,
@@ -74,7 +72,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
         final snap = await FirebaseFirestore.instance.collection('user').get();
         for (var doc in snap.docs) {
           playerIds.addAll(List<String>.from(doc.data()['playerIds'] ?? []));
-          // Add to Firestore notifications for each user
           await doc.reference.collection('notifications').add({
             'type': 'admin',
             'message': message,

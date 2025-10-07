@@ -1,4 +1,3 @@
-// user_detail.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -95,14 +94,10 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
               'currentConnectionId': null,
             });
           }
-
-          // Notify both via push
           final userPlayerIds = List<String>.from(_userData?['playerIds'] ?? []);
           final caretakerPlayerIds = List<String>.from(_caretakerData?['playerIds'] ?? []);
           await sendNotification(userPlayerIds, 'Your connection has been unbound by admin.');
           await sendNotification(caretakerPlayerIds, 'Your connection has been unbound by admin.');
-
-          // Add to Firestore notifications
           await _firestore.collection('user').doc(widget.userId).collection('notifications').add({
             'type': 'admin',
             'message': 'Your connection has been unbound by admin.',
@@ -158,14 +153,11 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
     if (confirm == true) {
       try {
         await _firestore.collection('user').doc(widget.userId).update({'isBanned': true});
-        // Unbind if connected
         if (_userData?['isConnected'] == true) {
           _unbindConnection();
         }
-        // Notify user via push
         final userPlayerIds = List<String>.from(_userData?['playerIds'] ?? []);
         await sendNotification(userPlayerIds, 'Your account has been banned. Reason: ${reasonController.text}');
-        // Add to Firestore notifications
         await _firestore.collection('user').doc(widget.userId).collection('notifications').add({
           'type': 'admin',
           'message': 'Your account has been banned. Reason: ${reasonController.text}',
@@ -243,7 +235,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
       try {
         final playerIds = List<String>.from(_userData?['playerIds'] ?? []);
         await sendNotification(playerIds, '${_titleController.text}: ${_messageController.text}');
-        // Add to Firestore notifications
         await _firestore.collection('user').doc(widget.userId).collection('notifications').add({
           'type': 'admin',
           'message': '${_titleController.text}: ${_messageController.text}',
@@ -287,7 +278,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
       ),
       body: Column(
         children: [
-          // Profile Header
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -339,7 +329,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Personal Info Tab
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Card(
@@ -366,7 +355,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
                     ),
                   ),
                 ),
-                // Address Tab
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Card(
@@ -385,7 +373,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
                     ),
                   ),
                 ),
-                // Connection Tab
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Card(
@@ -401,7 +388,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
                             _buildDetailRow(Icons.work, 'Caretaker Type', _caretakerData?['caregiverType'] ?? 'N/A'),
                             _buildDetailRow(Icons.email, 'Caretaker Email', _caretakerData?['email'] ?? 'N/A'),
                             _buildDetailRow(Icons.phone, 'Caretaker Phone', _caretakerData?['phoneNo'] ?? 'N/A'),
-                            // Add more caretaker details if needed
                           ] else ...[
                             const Center(
                               child: Column(
@@ -414,17 +400,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> with SingleTickerPr
                             ),
                           ],
                           const SizedBox(height: 16),
-                          if (_userData?['isConnected'] != true)
-                            ElevatedButton(
-                              onPressed: () {
-                                // Add bind logic if needed
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                              child: const Text('Bind Caretaker'),
-                            ),
                         ],
                       ),
                     ),

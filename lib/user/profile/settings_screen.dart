@@ -1,4 +1,3 @@
-// lib/user/profile/settings_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +22,7 @@ class SettingsScreen extends StatelessWidget {
     }
     await FirebaseAuth.instance.signOut();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('lastRole'); // Clear role on logout
+    await prefs.remove('lastRole'); 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const WelcomePage()),
@@ -81,7 +80,6 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            /// 🔹 Added Report Option
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(

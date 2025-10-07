@@ -28,11 +28,11 @@ class _DiaryAlbumScreenState extends State<DiaryAlbumScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(48), // height just for the TabBar
+        preferredSize: const Size.fromHeight(48), 
         child: AppBar(
           backgroundColor: Colors.blueAccent,
-          automaticallyImplyLeading: false, // no back button
-          titleSpacing: 0, // removes extra title padding
+          automaticallyImplyLeading: false, 
+          titleSpacing: 0,
           title: TabBar(
             controller: _tabController,
             indicatorColor: Colors.white,

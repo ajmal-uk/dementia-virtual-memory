@@ -48,7 +48,6 @@ class _AlbumScreenState extends State<AlbumScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading albums: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -94,9 +93,11 @@ class _AlbumScreenState extends State<AlbumScreen> {
         }
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Permission denied for ${source == ImageSource.camera ? 'camera' : 'photos'}')),
-      );
+      if(mounted){
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Permission denied for ${source == ImageSource.camera ? 'camera' : 'photos'}')),
+        );
+      }
     }
   }
 
@@ -162,7 +163,6 @@ class _AlbumScreenState extends State<AlbumScreen> {
       }
 
       try {
-        // Upload to Cloudinary
         final uri = Uri.parse('https://api.cloudinary.com/v1_1/dts8hgf4f/image/upload');
         var request = http.MultipartRequest('POST', uri)
           ..fields['upload_preset'] = 'album_images'
@@ -188,17 +188,21 @@ class _AlbumScreenState extends State<AlbumScreen> {
             });
 
             _loadAlbums();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Memory added successfully')),
-            );
+            if(mounted){
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Memory added successfully')),
+              );
+            }
           }
         } else {
           throw 'Upload failed: ${response.body}';
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding memory: $e')),
-        );
+        if(mounted){
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error adding memory: $e')),
+          );
+        }
       }
     }
   }

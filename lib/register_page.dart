@@ -12,7 +12,9 @@ import 'careTaker/caretaker_bottom_nav.dart';
 import 'user/user_bottom_nav.dart';
 
 enum CaregiverType { relative, nurse }
+
 enum UserGender { male, female, other }
+
 enum FormSection { personal, address, caretaker, review }
 
 class RegisterPage extends StatefulWidget {
@@ -33,7 +35,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController localityController = TextEditingController();
   final TextEditingController cityController = TextEditingController();
   final TextEditingController stateController = TextEditingController();
-  final TextEditingController experienceYearsController = TextEditingController();
+  final TextEditingController experienceYearsController =
+      TextEditingController();
   final TextEditingController relationController = TextEditingController();
   final TextEditingController expBioController = TextEditingController();
   final TextEditingController gradNursingController = TextEditingController();
@@ -52,8 +55,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   final ImagePicker _picker = ImagePicker();
 
-  // Default profile image URL
-  static const String defaultProfileImageUrl = 
+  static const String defaultProfileImageUrl =
       'https://res.cloudinary.com/dts8hgf4f/image/upload/v1758882470/user_jvnx80.png';
 
   @override
@@ -136,7 +138,9 @@ class _RegisterPageState extends State<RegisterPage> {
           _showErrorDialog('Email is required');
           return false;
         }
-        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim())) {
+        if (!RegExp(
+          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+        ).hasMatch(emailController.text.trim())) {
           _showErrorDialog('Please enter a valid email address');
           return false;
         }
@@ -194,9 +198,11 @@ class _RegisterPageState extends State<RegisterPage> {
             _showErrorDialog('Nursing qualification is required for nurses');
             return false;
           }
-          // Certificate validation for nurses
+
           if (_selectedCertificatePath == null) {
-            _showErrorDialog('Graduation certificate is required for nurse registration');
+            _showErrorDialog(
+              'Graduation certificate is required for nurse registration',
+            );
             return false;
           }
         }
@@ -264,7 +270,7 @@ class _RegisterPageState extends State<RegisterPage> {
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
-            dialogBackgroundColor: Colors.white,
+            dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
           ),
           child: child!,
         );
@@ -295,7 +301,6 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  // Cloudinary upload logic
   Future<String?> _uploadFile(String? filePath, String preset) async {
     if (filePath == null) return null;
 
@@ -303,7 +308,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (cloudName == null || cloudName.isEmpty) {
       if (mounted) {
-        _showErrorDialog('Cloudinary configuration error. Please try again later.');
+        _showErrorDialog(
+          'Cloudinary configuration error. Please try again later.',
+        );
       }
       return null;
     }
@@ -347,7 +354,6 @@ class _RegisterPageState extends State<RegisterPage> {
       final email = emailController.text.trim();
       final phone = phoneController.text.trim();
 
-      // Check for existing username
       final snapUsername = await _firestore
           .collection(widget.role)
           .where('username', isEqualTo: username)
@@ -356,7 +362,6 @@ class _RegisterPageState extends State<RegisterPage> {
         throw 'Username "$username" is already taken. Please choose a different username.';
       }
 
-      // Check for existing email
       final snapEmail = await _firestore
           .collection(widget.role)
           .where('email', isEqualTo: email)
@@ -365,7 +370,6 @@ class _RegisterPageState extends State<RegisterPage> {
         throw 'Email "$email" is already registered. Please use a different email or try logging in.';
       }
 
-      // Upload profile image or use default
       if (_selectedProfileImagePath != null) {
         profileUrl = await _uploadFile(
           _selectedProfileImagePath,
@@ -375,13 +379,12 @@ class _RegisterPageState extends State<RegisterPage> {
         profileUrl = defaultProfileImageUrl;
       }
 
-      // Upload certificate for nurses
       if (widget.role == 'caretaker' && _caregiverType == CaregiverType.nurse) {
         certificateUrl = await _uploadFile(
           _selectedCertificatePath,
           'graduation',
         );
-        
+
         if (certificateUrl == null) {
           throw 'Failed to upload graduation certificate. Please try again.';
         }
@@ -446,7 +449,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
         await _firestore.collection(widget.role).doc(uid).set(data);
 
-        // Add player ID
         final playerId = OneSignal.User.pushSubscription.id;
         if (playerId != null) {
           await _firestore.collection(widget.role).doc(uid).update({
@@ -454,21 +456,20 @@ class _RegisterPageState extends State<RegisterPage> {
           });
         }
 
-        // Save role to shared preferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('lastRole', widget.role);
 
         if (mounted) {
           _showSuccessDialog('Registration successful! Welcome to DVMA.');
-          
-          Widget targetScreen = const SizedBox(); 
-          
+
+          Widget targetScreen = const SizedBox();
+
           if (widget.role == 'user') {
             targetScreen = const UserBottomNav();
           } else if (widget.role == 'caretaker') {
             targetScreen = const CareTaker();
           }
-          
+
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => targetScreen),
@@ -479,20 +480,24 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       if (mounted) {
         String message = 'Registration failed. Please try again.';
-        
+
         if (e is FirebaseAuthException) {
           switch (e.code) {
             case 'email-already-in-use':
-              message = 'This email is already registered. Please use a different email or try logging in.';
+              message =
+                  'This email is already registered. Please use a different email or try logging in.';
               break;
             case 'weak-password':
-              message = 'Password is too weak. Please choose a stronger password.';
+              message =
+                  'Password is too weak. Please choose a stronger password.';
               break;
             case 'invalid-email':
-              message = 'The email address is invalid. Please check and try again.';
+              message =
+                  'The email address is invalid. Please check and try again.';
               break;
             case 'operation-not-allowed':
-              message = 'Email/password accounts are not enabled. Please contact support.';
+              message =
+                  'Email/password accounts are not enabled. Please contact support.';
               break;
             default:
               message = 'Authentication error: ${e.message}';
@@ -500,7 +505,7 @@ class _RegisterPageState extends State<RegisterPage> {
         } else if (e is String) {
           message = e;
         }
-        
+
         _showErrorDialog(message);
       }
     } finally {
@@ -535,7 +540,9 @@ class _RegisterPageState extends State<RegisterPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.green : Colors.blueAccent.withOpacity(0.1),
+                  color: isSelected
+                      ? Colors.green
+                      : Colors.blueAccent.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -586,10 +593,14 @@ class _RegisterPageState extends State<RegisterPage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _caregiverType == value ? Colors.blueAccent : Colors.grey.shade300,
+          color: _caregiverType == value
+              ? Colors.blueAccent
+              : Colors.grey.shade300,
           width: _caregiverType == value ? 2 : 1,
         ),
-        color: _caregiverType == value ? Colors.blueAccent.withOpacity(0.05) : Colors.white,
+        color: _caregiverType == value
+            ? Colors.blueAccent.withOpacity(0.05)
+            : Colors.white,
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -612,10 +623,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         subtitle: Text(
           description,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
       ),
     );
@@ -638,24 +646,20 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       backgroundColor: Colors.grey.shade100,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
-  // Progress indicator
   Widget _buildProgressIndicator() {
     final sections = widget.role == 'caretaker'
         ? ['Personal', 'Address', 'Caretaker', 'Review']
         : ['Personal', 'Address', 'Review'];
-    
+
     final currentIndex = _currentSection.index;
     final totalSections = sections.length;
 
     return Column(
       children: [
-        // Progress bar with percentage
         Stack(
           children: [
             LinearProgressIndicator(
@@ -679,7 +683,7 @@ class _RegisterPageState extends State<RegisterPage> {
           ],
         ),
         const SizedBox(height: 20),
-        // Section labels
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: sections.asMap().entries.map((entry) {
@@ -687,7 +691,7 @@ class _RegisterPageState extends State<RegisterPage> {
             final section = entry.value;
             final isActive = index <= currentIndex;
             final isCurrent = index == currentIndex;
-            
+
             return Expanded(
               child: Column(
                 children: [
@@ -695,9 +699,13 @@ class _RegisterPageState extends State<RegisterPage> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: isActive ? Colors.blueAccent : Colors.grey.shade300,
+                      color: isActive
+                          ? Colors.blueAccent
+                          : Colors.grey.shade300,
                       shape: BoxShape.circle,
-                      border: isCurrent ? Border.all(color: Colors.blueAccent, width: 3) : null,
+                      border: isCurrent
+                          ? Border.all(color: Colors.blueAccent, width: 3)
+                          : null,
                     ),
                     child: Center(
                       child: Icon(
@@ -713,8 +721,12 @@ class _RegisterPageState extends State<RegisterPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                      color: isCurrent ? Colors.blueAccent : Colors.grey.shade600,
+                      fontWeight: isCurrent
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: isCurrent
+                          ? Colors.blueAccent
+                          : Colors.grey.shade600,
                     ),
                   ),
                 ],
@@ -727,7 +739,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // Personal Information Section
   Widget _buildPersonalSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -754,7 +765,6 @@ class _RegisterPageState extends State<RegisterPage> {
           keyboardType: TextInputType.phone,
         ),
 
-        // Profile Image Upload
         _buildFilePicker(
           label: 'Profile Image',
           onTap: _pickProfileImage,
@@ -770,17 +780,13 @@ class _RegisterPageState extends State<RegisterPage> {
               Expanded(
                 child: Text(
                   'Optional - Default image will be used if not selected',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ),
             ],
           ),
         ),
 
-        // Gender Selection
         const SizedBox(height: 8),
         Text(
           'Gender *',
@@ -802,7 +808,6 @@ class _RegisterPageState extends State<RegisterPage> {
           ],
         ),
 
-        // Date of Birth Picker
         const SizedBox(height: 16),
         Text(
           'Date of Birth *',
@@ -834,7 +839,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       : '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}',
                   style: TextStyle(
                     fontSize: 16,
-                    color: _selectedDOB == null ? Colors.grey.shade500 : Colors.grey.shade800,
+                    color: _selectedDOB == null
+                        ? Colors.grey.shade500
+                        : Colors.grey.shade800,
                   ),
                 ),
                 const Spacer(),
@@ -847,7 +854,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // Address Section
   Widget _buildAddressSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -864,14 +870,17 @@ class _RegisterPageState extends State<RegisterPage> {
           Icons.description_outlined,
           maxLines: 3,
         ),
-        _buildTextField(localityController, 'Locality/Area', Icons.location_on_outlined),
+        _buildTextField(
+          localityController,
+          'Locality/Area',
+          Icons.location_on_outlined,
+        ),
         _buildTextField(cityController, 'City', Icons.location_city_outlined),
         _buildTextField(stateController, 'State', Icons.public_outlined),
       ],
     );
   }
 
-  // Caretaker Section
   Widget _buildCaretakerSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -883,7 +892,6 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 24),
 
-        // Caregiver Type Selection
         Text(
           'I am registering as a: *',
           style: TextStyle(
@@ -941,7 +949,11 @@ class _RegisterPageState extends State<RegisterPage> {
             padding: const EdgeInsets.only(bottom: 16),
             child: Row(
               children: [
-                Icon(Icons.warning_amber_outlined, color: Colors.orange, size: 16),
+                Icon(
+                  Icons.warning_amber_outlined,
+                  color: Colors.orange,
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -960,7 +972,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // Review Section
   Widget _buildReviewSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -971,55 +982,65 @@ class _RegisterPageState extends State<RegisterPage> {
           icon: Icons.verified_user_outlined,
         ),
         const SizedBox(height: 24),
-        
-        // Personal Info Review
+
         _buildReviewSectionTitle('Personal Information'),
         _buildReviewItem('Full Name', nameController.text),
         _buildReviewItem('Username', usernameController.text),
         _buildReviewItem('Email', emailController.text),
         _buildReviewItem('Phone', phoneController.text),
         _buildReviewItem('Gender', _selectedGender.name.toUpperCase()),
-        _buildReviewItem('Date of Birth', 
-          _selectedDOB != null 
-            ? '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}'
-            : 'Not selected'
+        _buildReviewItem(
+          'Date of Birth',
+          _selectedDOB != null
+              ? '${_selectedDOB!.day}/${_selectedDOB!.month}/${_selectedDOB!.year}'
+              : 'Not selected',
         ),
-        _buildReviewItem('Profile Image', 
-          _selectedProfileImagePath != null ? 'Uploaded' : 'Default image'
+        _buildReviewItem(
+          'Profile Image',
+          _selectedProfileImagePath != null ? 'Uploaded' : 'Default image',
         ),
-        
-        // Address Info Review
+
         _buildReviewSectionTitle('Address Information'),
         _buildReviewItem('Bio', bioController.text),
         _buildReviewItem('Locality', localityController.text),
         _buildReviewItem('City', cityController.text),
         _buildReviewItem('State', stateController.text),
-        
+
         // Caretaker Specific Review
         if (widget.role == 'caretaker') ...[
           _buildReviewSectionTitle('Caretaker Details'),
-          _buildReviewItem('Caregiver Type', 
-            _caregiverType == CaregiverType.relative ? 'Family Relative' : 'Professional Nurse'
+          _buildReviewItem(
+            'Caregiver Type',
+            _caregiverType == CaregiverType.relative
+                ? 'Family Relative'
+                : 'Professional Nurse',
           ),
           if (_caregiverType == CaregiverType.relative)
             _buildReviewItem('Relation to Patient', relationController.text),
           if (_caregiverType == CaregiverType.nurse) ...[
-            _buildReviewItem('Years of Experience', '${experienceYearsController.text} years'),
-            _buildReviewItem('Professional Experience', expBioController.text),
-            _buildReviewItem('Nursing Qualification', gradNursingController.text),
-            _buildReviewItem('Graduation Certificate', 
-              _selectedCertificatePath != null ? 'Uploaded ✓' : 'Not uploaded'
+            _buildReviewItem(
+              'Years of Experience',
+              '${experienceYearsController.text} years',
             ),
-          ]
+            _buildReviewItem('Professional Experience', expBioController.text),
+            _buildReviewItem(
+              'Nursing Qualification',
+              gradNursingController.text,
+            ),
+            _buildReviewItem(
+              'Graduation Certificate',
+              _selectedCertificatePath != null ? 'Uploaded ✓' : 'Not uploaded',
+            ),
+          ],
         ],
-        
+
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.blueAccent.withOpacity(0.05),
+            color: Colors.blueAccent.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blueAccent.withOpacity(0.2)),
+            border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -1028,10 +1049,7 @@ class _RegisterPageState extends State<RegisterPage> {
               Expanded(
                 child: Text(
                   'By submitting, you agree to our Terms of Service and Privacy Policy',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
                 ),
               ),
             ],
@@ -1041,14 +1059,18 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildSectionHeader({required String title, required String subtitle, required IconData icon}) {
+  Widget _buildSectionHeader({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.blueAccent.withOpacity(0.1),
+            color: Colors.blueAccent.withValues(alpha : 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: Colors.blueAccent, size: 24),
@@ -1069,10 +1091,7 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
             ],
           ),
@@ -1122,7 +1141,9 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Text(
               value.isEmpty ? 'Not provided' : value,
               style: TextStyle(
-                color: value.isEmpty ? Colors.grey.shade500 : Colors.grey.shade800,
+                color: value.isEmpty
+                    ? Colors.grey.shade500
+                    : Colors.grey.shade800,
               ),
             ),
           ),
@@ -1153,17 +1174,12 @@ class _RegisterPageState extends State<RegisterPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Colors.blueAccent,
-              Color(0xFFE3F2FD),
-              Colors.white,
-            ],
+            colors: [Colors.blueAccent, Color(0xFFE3F2FD), Colors.white],
             stops: [0.0, 0.2, 0.2],
           ),
         ),
         child: Column(
           children: [
-            // Progress Indicator
             Container(
               padding: const EdgeInsets.all(24.0),
               decoration: BoxDecoration(
@@ -1280,7 +1296,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1343,15 +1361,10 @@ class _RegisterPageState extends State<RegisterPage> {
         maxLines: maxLines,
         obscureText: obscureText,
         keyboardType: keyboardType,
-        style: TextStyle(
-          fontSize: 16,
-          color: Colors.grey.shade800,
-        ),
+        style: TextStyle(fontSize: 16, color: Colors.grey.shade800),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(
-            color: Colors.grey.shade600,
-          ),
+          labelStyle: TextStyle(color: Colors.grey.shade600),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1366,11 +1379,11 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
           filled: true,
           fillColor: Colors.white,
-          prefixIcon: Icon(
-            icon,
-            color: Colors.blueAccent,
+          prefixIcon: Icon(icon, color: Colors.blueAccent),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       ),
     );

@@ -1,4 +1,3 @@
-// caretaker_detail.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -7,7 +6,6 @@ import '../../utils/notification_helper.dart';
 class CaretakerDetailScreen extends StatefulWidget {
   final String caretakerId;
   const CaretakerDetailScreen({super.key, required this.caretakerId});
-
   @override
   State<CaretakerDetailScreen> createState() => _CaretakerDetailScreenState();
 }
@@ -100,8 +98,6 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> with Sing
           final userPlayerIds = List<String>.from(_userData?['playerIds'] ?? []);
           await sendNotification(caretakerPlayerIds, 'Your connection has been unbound by admin.');
           await sendNotification(userPlayerIds, 'Your connection has been unbound by admin.');
-
-          // Add to Firestore notifications
           await _firestore.collection('caretaker').doc(widget.caretakerId).collection('notifications').add({
             'type': 'admin',
             'message': 'Your connection has been unbound by admin.',
@@ -307,7 +303,6 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> with Sing
       ),
       body: Column(
         children: [
-          // Profile Header
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -359,7 +354,6 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> with Sing
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Personal Info Tab
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Card(
@@ -384,7 +378,6 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> with Sing
                     ),
                   ),
                 ),
-                // Caretaker Info Tab
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Card(
@@ -413,7 +406,6 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> with Sing
                     ),
                   ),
                 ),
-                // Connection Tab
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Card(
@@ -446,17 +438,6 @@ class _CaretakerDetailScreenState extends State<CaretakerDetailScreen> with Sing
                             ),
                           ],
                           const SizedBox(height: 16),
-                          if (_caretakerData?['isConnected'] != true)
-                            ElevatedButton(
-                              onPressed: () {
-                                // Add bind logic here if needed
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                              child: const Text('Bind User'),
-                            ),
                         ],
                       ),
                     ),

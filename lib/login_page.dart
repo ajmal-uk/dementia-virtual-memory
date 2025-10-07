@@ -73,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
         data = docByUid.data();
         docRef = _firestore.collection(widget.role).doc(uid);
       } else {
-        // Fallback: try finding the document by email (useful for admin docs created manually)
+        
         if (email != null && email.isNotEmpty) {
           final query = await _firestore
               .collection(widget.role)
@@ -86,11 +86,11 @@ class _LoginPageState extends State<LoginPage> {
             data = qdoc.data();
             docRef = qdoc.reference;
 
-            // Optional: store uid into that document to help future lookups
+            
             try {
               await qdoc.reference.update({'uid': uid});
             } catch (_) {
-              // ignore update errors
+              
             }
           }
         }
@@ -107,7 +107,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Ban check
+      
       if (data['isBanned'] == true) {
         await _auth.signOut();
         if (mounted) {
@@ -119,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Add OneSignal player id to the found document
+      
       try {
         final playerId = OneSignal.User.pushSubscription.id;
         if (playerId != null && playerId.isNotEmpty) {
@@ -128,17 +128,15 @@ class _LoginPageState extends State<LoginPage> {
           });
         }
       } catch (_) {
-        // If OneSignal call fails, ignore - don't block login
       }
 
-      // Save role for auto-login
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('lastRole', widget.role);
 
       if (mounted) {
         _showSuccessDialog('Welcome Back!', 'Successfully logged in as ${widget.role}');
         
-        // Navigate to the appropriate home screen and prevent going back
+        
         Widget targetScreen = const SizedBox();
         
         if (widget.role == 'user') {
@@ -148,12 +146,11 @@ class _LoginPageState extends State<LoginPage> {
         } else {
           targetScreen = const AdminBottomNav();
         }
-        
-        // Use pushAndRemoveUntil to prevent going back to login
+
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => targetScreen),
-          (route) => false, // Remove all previous routes
+          (route) => false, 
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -278,7 +275,7 @@ class _LoginPageState extends State<LoginPage> {
     return null;
   }
 
-  // New: Function to show support dialog with email
+  
   Future<void> _showSupportDialog() async {
     final _firestore = FirebaseFirestore.instance;
     String? supportEmail;
@@ -391,7 +388,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Login Card
+                  
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(32),
@@ -411,7 +408,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header
+                          
                           Row(
                             children: [
                               Container(
@@ -454,7 +451,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 32),
 
-                          // Email Field
+                          
                           Text(
                             'Email Address',
                             style: TextStyle(
@@ -505,7 +502,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Password Field
+                          
                           Text(
                             'Password',
                             style: TextStyle(
@@ -565,7 +562,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 8),
 
-                          // Forgot Password
+                          
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
@@ -585,7 +582,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Login Button
+                          
                           _loading
                               ? Container(
                                   height: 56,
@@ -633,7 +630,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                           const SizedBox(height: 16),
 
-                          // Register Link
+                          
                           if (!isAdmin)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -666,7 +663,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  // Footer
+                  
                   const SizedBox(height: 32),
                   Text(
                     'Secure Login • Protected by Firebase',

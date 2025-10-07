@@ -16,7 +16,6 @@ class _CaretakerMapScreenState extends State<CaretakerMapScreen> {
   LatLng? _patientLocation;
   Set<Marker> _markers = {};
 
-  // 🌍 Default camera (India)
   static const CameraPosition _initialCamera = CameraPosition(
     target: LatLng(20.5937, 78.9629),
     zoom: 4,
@@ -25,7 +24,6 @@ class _CaretakerMapScreenState extends State<CaretakerMapScreen> {
   @override
   void initState() {
     super.initState();
-    // Initial fetch can be handled in StreamBuilder
   }
 
   void _recenter() {
@@ -72,11 +70,11 @@ class _CaretakerMapScreenState extends State<CaretakerMapScreen> {
           final double lng = data?['currentLng'] as double? ?? 0.0;
           final newLocation = LatLng(lat, lng);
 
-          // Update location and markers
+   
           if (_patientLocation == null || _patientLocation != newLocation) {
             _patientLocation = newLocation;
             _markers = {_buildPatientMarker(_patientLocation!)};
-            // Animate camera if map is ready and location has changed or first load
+          
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _recenter();
             });
@@ -85,7 +83,6 @@ class _CaretakerMapScreenState extends State<CaretakerMapScreen> {
           return GoogleMap(
             onMapCreated: (controller) {
               _mapController = controller;
-              // Recenter once map is created
               _recenter();
             },
             initialCameraPosition: _initialCamera,

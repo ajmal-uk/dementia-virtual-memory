@@ -24,7 +24,6 @@ class _ProfileState extends State<Profile> {
     _fetchUserData();
   }
 
-  // --- Live Data Fetch Function ---
   void _fetchUserData() async {
     final user = _auth.currentUser;
     if (user == null) {

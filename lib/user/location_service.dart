@@ -1,4 +1,3 @@
-// lib/user/location_service.dart (Fully Fixed)
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,7 +12,7 @@ class PatientLocationService {
   Timer? _updateTimer;
   bool _isSharing = false;
 
-  // Check if location services are enabled
+  
   Future<bool> _checkLocationService() async {
     try {
       return await Geolocator.isLocationServiceEnabled();
@@ -23,10 +22,10 @@ class PatientLocationService {
     }
   }
 
-  // Request location permissions
+  
   Future<bool> _requestLocationPermission(BuildContext context) async {
     try {
-      // Check current permission status first
+      
       LocationPermission permission = await Geolocator.checkPermission();
       
       if (permission == LocationPermission.deniedForever) {
@@ -77,7 +76,7 @@ class PatientLocationService {
     }
   }
 
-  // Show permission dialog
+  
   Future<void> _showPermissionDialog(BuildContext context, String title, String content) async {
     return showDialog(
       context: context,
@@ -101,7 +100,7 @@ class PatientLocationService {
     );
   }
 
-  // Start sharing location
+  
   Future<void> startSharingLocation(BuildContext context) async {
     if (_isSharing) {
       debugPrint('Location sharing already active');
@@ -109,7 +108,7 @@ class PatientLocationService {
     }
 
     try {
-      // Check if location services are enabled
+      
       final serviceEnabled = await _checkLocationService();
       if (!serviceEnabled) {
         if (context.mounted) {
@@ -137,19 +136,19 @@ class PatientLocationService {
         return;
       }
 
-      // Request location permission
+      
       final hasPermission = await _requestLocationPermission(context);
       if (!hasPermission) {
         return;
       }
 
-      // Start location sharing with initial update and periodic timer
+      
       _isSharing = true;
       
-      // Initial location update on start
+      
       await _getAndUpdateLocation(context);
       
-      // Set up periodic updates every 30 minutes
+      
       _updateTimer = Timer.periodic(const Duration(minutes: 30), (_) {
         _getAndUpdateLocation(context);
       });
@@ -167,7 +166,7 @@ class PatientLocationService {
     }
   }
 
-  // Get current location and update in Firestore
+  
   Future<void> _getAndUpdateLocation(BuildContext context) async {
     try {
       final position = await Geolocator.getCurrentPosition(
@@ -181,7 +180,7 @@ class PatientLocationService {
     }
   }
 
-  // Update location in Firestore
+  
   Future<void> _updateLocationInFirestore(Position position) async {
     try {
       final uid = _auth.currentUser?.uid;
@@ -202,7 +201,7 @@ class PatientLocationService {
     }
   }
 
-  // Handle location errors
+  
   void _handleLocationError(dynamic error, BuildContext context) {
     debugPrint('Location error: $error');
     
@@ -221,7 +220,7 @@ class PatientLocationService {
     }
   }
 
-  // Stop sharing location
+  
   Future<void> stopSharingLocation() async {
     try {
       _updateTimer?.cancel();
@@ -233,10 +232,10 @@ class PatientLocationService {
     }
   }
 
-  // Check if location is being shared
+  
   bool get isSharing => _isSharing;
 
-  // Dispose resources
+
   void dispose() {
     _updateTimer?.cancel();
     _updateTimer = null;

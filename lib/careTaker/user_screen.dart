@@ -1,11 +1,10 @@
-// lib/careTaker/user_screen.dart (Modified)
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 import 'caretaker_map_screen.dart';
-import 'family_scanner.dart';  // Import the scanner screen
+import 'family_scanner.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -20,7 +19,7 @@ class _UserScreenState extends State<UserScreen> {
 
   String? _patientUid;
   String? _patientName;
-  String? _patientImageUrl;  // Added for scanner
+  String? _patientImageUrl;  
   bool _isConnected = false;
   bool _isLoading = true;
 
@@ -59,7 +58,7 @@ class _UserScreenState extends State<UserScreen> {
               setState(() {
                 _patientUid = patientUid;
                 _patientName = patientDoc.data()?['fullName'] ?? 'Unknown Patient';
-                _patientImageUrl = patientDoc.data()?['profileImageUrl'] ?? '';  // Added
+                _patientImageUrl = patientDoc.data()?['profileImageUrl'] ?? '';
                 _isConnected = true;
                 _isLoading = false;
               });
@@ -90,7 +89,7 @@ class _UserScreenState extends State<UserScreen> {
     }
   }
 
-  // -------- TASK STREAM --------
+
   Stream<QuerySnapshot<Map<String, dynamic>>> _getTasksStream() {
     if (_patientUid == null) return Stream.empty();
 
@@ -290,9 +289,9 @@ class _UserScreenState extends State<UserScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // FIX: Add unique hero tags to prevent conflicts
+
                 FloatingActionButton.extended(
-                  heroTag: 'face_scan_btn', // UNIQUE TAG
+                  heroTag: 'face_scan_btn',
                   onPressed: _openFaceScanner,
                   label: const Text('Face Scan', style: TextStyle(color: Colors.white)),
                   icon: const Icon(Icons.face_unlock_outlined, color: Colors.white),
@@ -300,7 +299,7 @@ class _UserScreenState extends State<UserScreen> {
                 ),
                 const SizedBox(height: 12),
                 FloatingActionButton.extended(
-                  heroTag: 'track_location_btn', // UNIQUE TAG
+                  heroTag: 'track_location_btn',
                   onPressed: () {
                     if (_patientUid != null) {
                       Navigator.push(
