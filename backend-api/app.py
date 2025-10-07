@@ -16,7 +16,7 @@ class SimpleFacerec:
         self.model_name = model_name
 
     def _get_temp_image_path(self, image_data):
-        if image_data.startswith('http'):  # URL
+        if image_data.startswith('http'): 
             try:
                 resp = requests.get(image_data, stream=True, timeout=10)
                 resp.raise_for_status()
@@ -28,8 +28,7 @@ class SimpleFacerec:
             except Exception as e:
                 print(f"[ERROR] Could not download image from URL: {e}")
                 return None
-        elif image_data.startswith('data:image/'):  # data URI
-            # Extract base64
+        elif image_data.startswith('data:image/'):
             base64_str = image_data.split(',')[1]
             img_data = base64.b64decode(base64_str)
             tmp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
@@ -148,9 +147,7 @@ def recognize():
 
     loaded_members = 0
     for member in members:
-        # Check for both memberImage (base64 or URL) and memberImageUrl (optional)
         if all(k in member for k in ("memberName", "memberImage", "memberRelation")):
-            # Add the original URL to the member data if not present
             if "memberImageUrl" not in member:
                 member["memberImageUrl"] = member["memberImage"] if member["memberImage"].startswith('http') else ""
             if sfr.add_member(member):
@@ -168,7 +165,7 @@ def recognize():
             "matchFound": True,
             "memberName": matched_member["memberName"],
             "memberRelation": matched_member["memberRelation"],
-            "memberImageUrl": matched_member["memberImageUrl"],  # Return URL
+            "memberImageUrl": matched_member["memberImageUrl"], 
             "confidence": float(confidence)
         })
     else:
