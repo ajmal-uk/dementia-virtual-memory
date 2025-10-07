@@ -187,7 +187,12 @@ class _ProfileState extends State<Profile> {
                     trailing: const Icon(Icons.arrow_forward_ios,
                         size: 16, color: Colors.grey),
                     onTap: () {
-                      // Navigate to reports screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ReportPage(reporterRole: 'caretaker'),
+                        ),
+                      );
                     },
                   ),
 

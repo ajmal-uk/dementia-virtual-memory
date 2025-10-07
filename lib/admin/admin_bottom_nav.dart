@@ -1,6 +1,6 @@
-// New file: lib/admin/admin_bottom_nav.dart
+// admin_bottom_nav.dart
 import 'package:flutter/material.dart';
-import 'user/users_screen.dart';
+import 'users/users_screen.dart';
 import 'caretaker/caretakers_screen.dart';
 import 'reports_screen.dart';
 import 'notifications_screen.dart';
@@ -34,6 +34,8 @@ class _AdminBottomNavState extends State<AdminBottomNav> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.blueAccent,
         unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
+        elevation: 8,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
           BottomNavigationBarItem(icon: Icon(Icons.manage_accounts), label: 'Caretakers'),

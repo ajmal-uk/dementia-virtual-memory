@@ -1,5 +1,5 @@
-name: dvm
-description: "DVM - Dementia Virtual Memory App: Helping users preserve and manage memories."
+name: dvma
+description: "DVMA - Dementia Virtual Memory App: Helping users preserve and manage memories."
 publish_to: 'none' 
 version: 1.0.0+1
 

@@ -6,6 +6,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../report_page.dart';
 import '../../welcome_page.dart';
+import 'support_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -98,9 +99,26 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
             ),
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.help_outline, color: Colors.blue),
+                title: const Text('Support & Help'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SupportScreen(),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+

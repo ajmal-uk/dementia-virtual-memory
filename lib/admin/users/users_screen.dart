@@ -1,18 +1,19 @@
-// caretakers_screen.dart
+// users_screen.dart
 import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'caretaker_detail.dart';
+import 'user_detail.dart';
 import '../../utils/notification_helper.dart';
 
-class CaretakersScreen extends StatefulWidget {
-  const CaretakersScreen({super.key});
+class UsersScreen extends StatefulWidget {
+  const UsersScreen({super.key});
 
   @override
-  State<CaretakersScreen> createState() => _CaretakersScreenState();
+  State<UsersScreen> createState() => _UsersScreenState();
 }
 
-class _CaretakersScreenState extends State<CaretakersScreen> {
+class _UsersScreenState extends State<UsersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _search = '';
   String _selectedTab = 'All';
@@ -32,20 +33,20 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
     });
   }
 
-  Stream<QuerySnapshot> _getCaretakersStream() {
+  Stream<QuerySnapshot> _getUsersStream() {
     return _firestore
-        .collection('caretaker')
+        .collection('user')
         .orderBy('fullName')
         .snapshots();
   }
 
-  Future<void> _banCaretaker(String id) async {
+  Future<void> _banUser(String id) async {
     final reasonController = TextEditingController();
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Ban Caretaker', style: TextStyle(color: Colors.redAccent)),
+        title: const Text('Ban User', style: TextStyle(color: Colors.redAccent)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -69,31 +70,31 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
 
     if (confirm == true) {
       try {
-        final doc = await _firestore.collection('caretaker').doc(id).get();
+        final doc = await _firestore.collection('user').doc(id).get();
         final data = doc.data();
         if (data == null) return;
 
-        await _firestore.collection('caretaker').doc(id).update({'isBanned': true});
+        await _firestore.collection('user').doc(id).update({'isBanned': true});
         if (data['isConnected'] == true) {
           final connectionId = data['currentConnectionId'];
           if (connectionId != null) {
             final connDoc = await _firestore.collection('connections').doc(connectionId).get();
             final connData = connDoc.data();
             if (connData != null) {
-              final userUid = connData['user_uid'];
-              if (userUid != null) {
-                final userDoc = await _firestore.collection('user').doc(userUid).get();
-                final userData = userDoc.data();
+              final caretakerUid = connData['caretaker_uid'];
+              if (caretakerUid != null) {
+                final caretakerDoc = await _firestore.collection('caretaker').doc(caretakerUid).get();
+                final caretakerData = caretakerDoc.data();
 
                 await connDoc.reference.update({'status': 'unbound'});
                 await doc.reference.update({'isConnected': false, 'currentConnectionId': null});
-                await userDoc.reference.update({'isConnected': false, 'currentConnectionId': null});
+                await caretakerDoc.reference.update({'isConnected': false, 'currentConnectionId': null});
 
-                final caretakerPlayerIds = List<String>.from(data['playerIds'] ?? []);
-                final userPlayerIds = List<String>.from(userData?['playerIds'] ?? []);
+                final userPlayerIds = List<String>.from(data['playerIds'] ?? []);
+                final caretakerPlayerIds = List<String>.from(caretakerData?['playerIds'] ?? []);
 
-                await sendNotification(caretakerPlayerIds, 'Your connection has been unbound by admin.');
                 await sendNotification(userPlayerIds, 'Your connection has been unbound by admin.');
+                await sendNotification(caretakerPlayerIds, 'Your connection has been unbound by admin.');
 
                 await doc.reference.collection('notifications').add({
                   'type': 'admin',
@@ -101,7 +102,7 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                   'createdAt': Timestamp.now(),
                   'isRead': false,
                 });
-                await userDoc.reference.collection('notifications').add({
+                await caretakerDoc.reference.collection('notifications').add({
                   'type': 'admin',
                   'message': 'Your connection has been unbound by admin.',
                   'createdAt': Timestamp.now(),
@@ -111,8 +112,8 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
             }
           }
         }
-        final caretakerPlayerIds = List<String>.from(data['playerIds'] ?? []);
-        await sendNotification(caretakerPlayerIds, 'Your account has been banned. Reason: ${reasonController.text}');
+        final userPlayerIds = List<String>.from(data['playerIds'] ?? []);
+        await sendNotification(userPlayerIds, 'Your account has been banned. Reason: ${reasonController.text}');
         await doc.reference.collection('notifications').add({
           'type': 'admin',
           'message': 'Your account has been banned. Reason: ${reasonController.text}',
@@ -120,7 +121,7 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
           'isRead': false,
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Caretaker banned')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User banned')));
         }
       } catch (e) {
         if (mounted) {
@@ -130,13 +131,13 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
     }
   }
 
-  Future<void> _unbanCaretaker(String id) async {
+  Future<void> _unbanUser(String id) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Unban Caretaker', style: TextStyle(color: Colors.blueAccent)),
-        content: const Text('Are you sure you want to unban this caretaker?'),
+        title: const Text('Unban User', style: TextStyle(color: Colors.blueAccent)),
+        content: const Text('Are you sure you want to unban this user?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -156,13 +157,13 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
 
     if (confirm == true) {
       await _firestore
-          .collection('caretaker')
+          .collection('user')
           .doc(id)
           .update({'isBanned': false});
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Caretaker unbanned successfully')),
+          const SnackBar(content: Text('User unbanned successfully')),
         );
       }
     }
@@ -172,7 +173,7 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Caretakers', style: TextStyle(color: Colors.white)),
+        title: const Text('Users', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue,
         elevation: 0,
       ),
@@ -250,7 +251,7 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                   setState(() {});
                 },
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: _getCaretakersStream(),
+                  stream: _getUsersStream(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
@@ -274,6 +275,7 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                       final data = doc.data() as Map<String, dynamic>;
                       final username = (data['username'] as String?)?.toLowerCase() ?? '';
                       final isBanned = data['isBanned'] as bool? ?? false;
+
                       bool tabMatch = true;
                       if (_selectedTab == 'Active') {
                         tabMatch = !isBanned;
@@ -290,7 +292,7 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                           children: [
                             Icon(Icons.search_off, size: 64, color: Colors.grey),
                             const SizedBox(height: 16),
-                            Text('No caretakers found', style: const TextStyle(fontSize: 18, color: Colors.grey)),
+                            Text('No users found', style: const TextStyle(fontSize: 18, color: Colors.grey)),
                           ],
                         ),
                       );
@@ -302,17 +304,10 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                       itemBuilder: (context, index) {
                         final doc = filteredDocs[index];
                         final data = doc.data() as Map<String, dynamic>;
+                        final profileImageUrl = data['profileImageUrl'] as String?;
 
                         final isBanned = data['isBanned'] as bool? ?? false;
-                        final isApprove = data['isApprove'] as bool? ?? false;
-                        Color? cardColor;
-                        if (isBanned) {
-                          cardColor = Colors.red[50];
-                        } else if (!isApprove) {
-                          cardColor = Colors.orange[50];
-                        } else {
-                          cardColor = Colors.green[50];
-                        }
+                        Color? cardColor = isBanned ? Colors.red[50] : Colors.green[50];
 
                         return Card(
                           color: cardColor,
@@ -321,34 +316,23 @@ class _CaretakersScreenState extends State<CaretakersScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           child: ListTile(
                             leading: CircleAvatar(
-                              radius: 25,
-                              backgroundImage: (data['profileImageUrl'] != null && data['profileImageUrl'].isNotEmpty)
-                                  ? NetworkImage(data['profileImageUrl'])
+                              backgroundImage: (profileImageUrl != null && profileImageUrl.isNotEmpty)
+                                  ? NetworkImage(profileImageUrl)
                                   : null,
-                              child: (data['profileImageUrl'] == null || data['profileImageUrl'].isEmpty)
-                                  ? const Icon(Icons.person, size: 25)
+                              child: (profileImageUrl == null || profileImageUrl.isEmpty)
+                                  ? const Icon(Icons.person)
                                   : null,
                             ),
-                            title: Text(
-                              data['fullName'] ?? 'Unnamed',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('@${data['username'] ?? ''}'),
-                                Text('Type: ${data['caregiverType'] ?? 'Unknown'}'),
-                                Text('Connected: ${data['isConnected'] == true ? 'Yes' : 'No'}'),
-                              ],
-                            ),
+                            title: Text(data['fullName'] ?? 'Unnamed', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('@${data['username'] ?? ''}'),
                             trailing: IconButton(
                               icon: Icon(isBanned ? Icons.restore : Icons.block, color: isBanned ? Colors.green : Colors.red),
-                              onPressed: () => isBanned ? _unbanCaretaker(doc.id) : _banCaretaker(doc.id),
+                              onPressed: () => isBanned ? _unbanUser(doc.id) : _banUser(doc.id),
                             ),
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => CaretakerDetailScreen(caretakerId: doc.id),
+                                builder: (context) => UserDetailScreen(userId: doc.id),
                               ),
                             ),
                           ),

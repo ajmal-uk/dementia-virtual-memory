@@ -1,9 +1,11 @@
+// lib/careTaker/user_screen.dart (Modified)
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 import 'caretaker_map_screen.dart';
+import 'family_scanner.dart';  // Import the scanner screen
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -18,6 +20,7 @@ class _UserScreenState extends State<UserScreen> {
 
   String? _patientUid;
   String? _patientName;
+  String? _patientImageUrl;  // Added for scanner
   bool _isConnected = false;
   bool _isLoading = true;
 
@@ -56,6 +59,7 @@ class _UserScreenState extends State<UserScreen> {
               setState(() {
                 _patientUid = patientUid;
                 _patientName = patientDoc.data()?['fullName'] ?? 'Unknown Patient';
+                _patientImageUrl = patientDoc.data()?['profileImageUrl'] ?? '';  // Added
                 _isConnected = true;
                 _isLoading = false;
               });
@@ -238,9 +242,25 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   void _openFaceScanner() {
-    if (!_isConnected || _patientUid == null) {
+    if (!_isConnected || _patientUid == null || _patientName == null || _patientImageUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot open scanner: Not connected')));
+      return;
     }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScannerScreen(
+          members: [
+            {
+              'name': _patientName!,
+              'relation': 'Patient',
+              'imageUrl': _patientImageUrl!,
+            }
+          ],
+        ),
+      ),
+    );
   }
 
   @override

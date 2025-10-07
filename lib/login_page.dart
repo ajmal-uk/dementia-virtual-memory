@@ -1,10 +1,9 @@
-// lib/login_page.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'admin/admin_bottom_nav.dart';
 import 'careTaker/caretaker_bottom_nav.dart';
 import 'register_page.dart';
@@ -13,7 +12,7 @@ import 'user/user_bottom_nav.dart';
 
 class LoginPage extends StatefulWidget {
   final String role;
-  const LoginPage({Key? key, required this.role}) : super(key: key);
+  const LoginPage({super.key, required this.role});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -279,6 +278,61 @@ class _LoginPageState extends State<LoginPage> {
     return null;
   }
 
+  // New: Function to show support dialog with email
+  Future<void> _showSupportDialog() async {
+    final _firestore = FirebaseFirestore.instance;
+    String? supportEmail;
+    bool loading = true;
+    bool error = false;
+
+    try {
+      final doc = await _firestore.collection('api').doc('qHsy9xZJJanFlWFDx7ag').get();
+      if (doc.exists) {
+        supportEmail = doc.data()?['email'] as String?;
+      } else {
+        error = true;
+      }
+    } catch (e) {
+      error = true;
+    } finally {
+      loading = false;
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Support'),
+        content: loading
+            ? const Center(child: CircularProgressIndicator())
+            : error
+                ? const Text('Error loading support information')
+                : Text('Contact support at: $supportEmail'),
+        actions: [
+          if (!error && supportEmail != null)
+            TextButton(
+              onPressed: () async {
+                final uri = Uri(scheme: 'mailto', path: supportEmail);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not launch email app')),
+                  );
+                }
+              },
+              child: const Text('Email Support'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = widget.role == 'admin';
@@ -286,6 +340,17 @@ class _LoginPageState extends State<LoginPage> {
     
     return Scaffold(
       resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        title: Text('$roleDisplayName Login'),
+        backgroundColor: Colors.blueAccent,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: _showSupportDialog,
+            tooltip: 'Support',
+          ),
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -305,21 +370,6 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Logo and Welcome Section
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.health_and_safety_outlined,
-                      size: 80,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
                   Text(
                     'DVMA',
                     style: TextStyle(
@@ -332,7 +382,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 8),
                   
                   Text(
-                    'Digital Vision Monitoring Assistant',
+                    'Dementia Virtual Memory Assistant',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white.withOpacity(0.8),

@@ -1,10 +1,9 @@
-// lib/welcome_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'login_page.dart';
 
 class WelcomePage extends StatelessWidget {
-  const WelcomePage({Key? key}) : super(key: key);
+  const WelcomePage({super.key});
 
   void _navigateTo(BuildContext context, String role) {
     Navigator.push(
@@ -16,21 +15,21 @@ class WelcomePage extends StatelessWidget {
   }
 
   void _showAdminDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Admin Login'),
-      content: const Text('Proceed to admin login?'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        TextButton(onPressed: () {
-          Navigator.pop(context);
-          _navigateTo(context, 'admin');
-        }, child: const Text('Yes')),
-      ],
-    ),
-  );
-}
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Admin Login'),
+        content: const Text('Proceed to admin login?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () {
+            Navigator.pop(context);
+            _navigateTo(context, 'admin');
+          }, child: const Text('Yes')),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

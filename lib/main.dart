@@ -22,7 +22,7 @@ void main() async {
      OneSignal.initialize(oneSignalAppId);
      OneSignal.Notifications.requestPermission(true);
 
-  final geminiApiKey = "hhjkljouhnlj";
+  final geminiApiKey = "AIzaSyAZ9H-7y_aWH38HSCrOBbshkLmdLTLGvS4";
     Gemini.init(apiKey: geminiApiKey);
 
   final prefs = await SharedPreferences.getInstance();
