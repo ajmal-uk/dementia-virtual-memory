@@ -157,72 +157,63 @@ class _AddScreenState extends State<AddScreen> {
         backgroundColor: Colors.blueAccent,
         elevation: 0,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blueAccent.withValues(alpha: 0.1), Colors.white],
-          ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Member Details',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-              ),
-              const SizedBox(height: 24),
-              _buildTextField(_nameController, 'Name', Icons.person),
-              _buildTextField(_relationController, 'Relation', Icons.family_restroom),
-              _buildTextField(_phoneController, 'Phone', Icons.phone, keyboardType: TextInputType.phone),
-              const SizedBox(height: 24),
-              const Text(
-                'Profile Picture',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.blueAccent),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: GestureDetector(
-                  onTap: _pickImage,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage: _image != null ? FileImage(_image!) : null,
-                        child: _image == null ? const Icon(Icons.person, size: 60, color: Colors.blueAccent) : null,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Member Details',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+            ),
+            const SizedBox(height: 24),
+            _buildTextField(_nameController, 'Name', Icons.person),
+            _buildTextField(_relationController, 'Relation', Icons.family_restroom),
+            _buildTextField(_phoneController, 'Phone', Icons.phone, keyboardType: TextInputType.phone),
+            const SizedBox(height: 24),
+            const Text(
+              'Profile Picture',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.blueAccent),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Colors.grey[300],
+                      backgroundImage: _image != null ? FileImage(_image!) : null,
+                      child: _image == null ? const Icon(Icons.person, size: 60, color: Colors.blueAccent) : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.blueAccent,
+                        radius: 20,
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: CircleAvatar(
-                          backgroundColor: Colors.blueAccent,
-                          radius: 20,
-                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 32),
-              _isSaving
-                  ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
-                  : ElevatedButton(
-                      onPressed: _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: const Text('Add Member', style: TextStyle(fontSize: 18, color: Colors.white)),
+            ),
+            const SizedBox(height: 32),
+            _isSaving
+                ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
+                : ElevatedButton(
+                    onPressed: _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      minimumSize: const Size(double.infinity, 50),
                     ),
-            ],
-          ),
+                    child: const Text('Add Member', style: TextStyle(fontSize: 18, color: Colors.white)),
+                  ),
+          ],
         ),
       ),
     );

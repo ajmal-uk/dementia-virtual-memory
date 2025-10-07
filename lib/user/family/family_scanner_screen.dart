@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -35,6 +36,7 @@ class _ScannerScreenState extends State<ScannerScreen>
   bool _disposed = false;
   bool _isFrontCamera = false;
   List<CameraDescription> _cameras = [];
+  final _firestore = FirebaseFirestore.instance;
 
   // Result info
   Map<String, dynamic>? _resultData;
@@ -236,18 +238,30 @@ class _ScannerScreenState extends State<ScannerScreen>
     if (mounted && !_disposed) setState(() => _isProcessing = true);
 
     try {
+      // Fetch API URL from Firebase
+      final apiSnap = await _firestore.collection('api').doc('qHsy9xZJuanFIWFDx7ag').get();
+      final apiUrl = apiSnap.data()?['apiURL'] as String?;
+      if (apiUrl == null || apiUrl.isEmpty) {
+        logger.e('No API URL configured');
+        if (mounted && !_disposed) {
+          setState(() {
+            _resultData = null;
+            _noMatch = true;
+          });
+        }
+        return;
+      }
+
       final imageBytes = await _capturedImage!.readAsBytes();
       final base64Image = await _encodeImage(imageBytes);
       final response = await http.post(
-        Uri.parse('https://una-heliotropic-aspersively.ngrok-free.dev/recognize'),
+        Uri.parse('$apiUrl/recognize'),
         body: {
-          'members': jsonEncode(widget.members
-              .map((m) => {
-                    'memberName': m['name'],
-                    'memberRelation': m['relation'],
-                    'memberImage': m['imageUrl'],
-                  })
-              .toList()),
+          'members': jsonEncode(widget.members.map((m) => {
+                'memberName': m['name'],
+                'memberRelation': m['relation'],
+                'memberImage': m['imageUrl'],
+              }).toList()),
           'imageUrl': 'data:image/jpeg;base64,$base64Image',
         },
       ).timeout(const Duration(seconds: 30));
@@ -394,7 +408,7 @@ class _ScannerScreenState extends State<ScannerScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ElevatedButton(
+              ElevatedButton.icon(
                 onPressed: _sendToApi,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
@@ -402,9 +416,10 @@ class _ScannerScreenState extends State<ScannerScreen>
                       borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                child: const Text('OK', style: TextStyle(fontSize: 16)),
+                icon: const Icon(Icons.check),
+                label: const Text('OK', style: TextStyle(fontSize: 16)),
               ),
-              ElevatedButton(
+              ElevatedButton.icon(
                 onPressed: () {
                   setState(() {
                     _capturedImage = null;
@@ -418,7 +433,8 @@ class _ScannerScreenState extends State<ScannerScreen>
                       borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                child: const Text('Retake', style: TextStyle(fontSize: 16)),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retake', style: TextStyle(fontSize: 16)),
               ),
             ],
           ),

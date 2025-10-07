@@ -2,7 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:logger/Logger.dart';
+import 'package:logger/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../utils/notification_helper.dart';
@@ -40,11 +40,12 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
     return _firestore.collection('user').doc(uid).snapshots();
   }
 
-  // Stream for available caretakers - REMOVED THE isConnected FILTER
+  // Stream for available caretakers
   Stream<QuerySnapshot> _getAvailableCaretakersStream() {
     return _firestore
         .collection('caretaker')
-        .where('isBanned', isEqualTo: false).where('isConnected', isEqualTo: false)
+        .where('isBanned', isEqualTo: false)
+        .where('isConnected', isEqualTo: false)
         .snapshots();
   }
 
@@ -54,7 +55,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
     return _firestore.collection('connections').doc(connectionId).snapshots();
   }
 
-  // Stream for connected caretaker details
   Stream<DocumentSnapshot?> _getConnectedCaretakerStream(String? caretakerUid) {
     if (caretakerUid == null) return Stream.value(null);
     return _firestore.collection('caretaker').doc(caretakerUid).snapshots();
@@ -74,7 +74,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
           .where('caretaker_uid', isEqualTo: caretakerUid)
           .where('status', whereIn: ['pending', 'accepted'])
           .get();
-      
+
       if (existingRequests.docs.isNotEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -87,7 +87,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
       // Check if caretaker is already connected to someone else
       final caretakerDoc = await _firestore.collection('caretaker').doc(caretakerUid).get();
       final isCaretakerConnected = caretakerDoc.data()?['isConnected'] == true;
-      
+
       if (isCaretakerConnected) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -214,6 +214,29 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
       }
     } catch (e) {
       logger.e('Error confirming unbind: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _cancelUnbindRequest(String connectionId) async {
+    if (!mounted) return;
+
+    try {
+      await _firestore
+          .collection('connections')
+          .doc(connectionId)
+          .update({
+            'status': 'accepted',
+            'requestedBy': null,
+          });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unbind request cancelled')));
+      }
+    } catch (e) {
+      logger.e('Error cancelling unbind request: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
@@ -357,64 +380,168 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
   Widget _buildConnectedCaretakerUI(Map<String, dynamic> caretakerData, String caretakerUid, String connectionId) {
     final isNurse = caretakerData['caregiverType'] == 'nurse';
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.grey[300],
-                  backgroundImage: NetworkImage(
-                    caretakerData['profileImageUrl'] ?? '',
-                  ),
-                  child: const Icon(Icons.person, size: 60, color: Colors.blueAccent),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header with avatar - Improved with shadow and better padding
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.blueAccent,
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blueAccent.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                if (isNurse) _buildNurseBadge(),
               ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              caretakerData['fullName'] ?? 'Unnamed',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+            child: Column(
+              children: [
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.grey[300],
+                        backgroundImage: (caretakerData['profileImageUrl'] != null &&
+                                caretakerData['profileImageUrl'].toString().isNotEmpty)
+                            ? NetworkImage(caretakerData['profileImageUrl'])
+                            : null,
+                        child: (caretakerData['profileImageUrl'] == null ||
+                                caretakerData['profileImageUrl'].toString().isEmpty)
+                            ? const Icon(Icons.person, size: 60, color: Colors.blueAccent)
+                            : null,
+                      ),
+                      if (isNurse) _buildNurseBadge(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  caretakerData['fullName'] ?? 'Unnamed',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                Text(
+                  '@${caretakerData['username'] ?? ''}',
+                  style: const TextStyle(fontSize: 16, color: Colors.white70),
+                ),
+              ],
             ),
-            Text(
-              '@${caretakerData['username'] ?? ''}',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+
+          // Details Card - Improved elevation and padding
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoRow(Icons.info_outline, 'Bio', caretakerData['bio'] ?? ''),
+                    _buildInfoRow(Icons.location_city, 'City', caretakerData['city'] ?? ''),
+                    _buildInfoRow(Icons.phone, 'Phone', caretakerData['phoneNo'] ?? ''),
+                    if (isNurse) ...[
+                      _buildInfoRow(Icons.work_history, 'Experience Years', '${caretakerData['experienceYears'] ?? 0} years'),
+                      _buildInfoRow(Icons.description, 'Experience Bio', caretakerData['experienceBio'] ?? ''),
+                      _buildInfoRow(Icons.school, 'Nursing Qualification', caretakerData['graduationOnNursing'] ?? ''),
+                      if (caretakerData['graduationCertificateUrl']?.isNotEmpty ?? false)
+                        _buildInfoRow(Icons.picture_as_pdf, 'Certificate', caretakerData['graduationCertificateUrl']),
+                    ] else
+                      _buildInfoRow(Icons.family_restroom, 'Relation', caretakerData['relation'] ?? ''),
+                  ],
+                ),
+              ),
             ),
-            Text(
-              'Experience: ${caretakerData['experienceYears'] ?? 0} years',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+
+          // Actions - Improved button styles
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Column(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final phone = caretakerData['phoneNo'];
+                    if (phone != null && phone.isNotEmpty) {
+                      final url = Uri.parse('tel:$phone');
+                      final can = await canLaunchUrl(url);
+                      if (can) {
+                        await launchUrl(url);
+                      } else if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not launch phone app')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.phone),
+                  label: const Text('Call Caretaker'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _requestUnbind(connectionId, caretakerUid),
+                  icon: const Icon(Icons.link_off),
+                  label: const Text('Request Unbind'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _requestUnbind(connectionId, caretakerUid),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Request Unbind', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blueAccent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                if (label == 'Certificate')
+                  GestureDetector(
+                    onTap: () async {
+                      final url = Uri.parse(value);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not open certificate')),
+                        );
+                      }
+                    },
+                    child: const Text(
+                      'View Certificate',
+                      style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                    ),
+                  )
+                else
+                  Text(value),
+              ],
             ),
-            const SizedBox(height: 10),
-            IconButton(
-              icon: const Icon(Icons.phone, color: Colors.green, size: 32),
-              onPressed: () async {
-                final phone = caretakerData['phoneNo'];
-                if (phone != null && phone.isNotEmpty) {
-                  final url = Uri.parse('tel:$phone');
-                  final can = await canLaunchUrl(url);
-                  if (can) {
-                    await launchUrl(url);
-                  } else if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Could not launch phone app')),
-                    );
-                  }
-                }
-              },
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -451,6 +578,12 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
                 }
                 return const SizedBox();
               },
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => _cancelUnbindRequest(connectionId),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              child: const Text('Cancel Request', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -506,7 +639,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
   Widget _buildAvailableCaretakers() {
     return Column(
       children: [
-        // Search Field
+        // Search Field - Improved with clear button
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: TextField(
@@ -520,11 +653,19 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
                 borderSide: BorderSide.none,
               ),
               prefixIcon: const Icon(Icons.search, color: Colors.blueAccent),
+              suffixIcon: _search.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                      },
+                    )
+                  : null,
             ),
           ),
         ),
 
-        // Available Caretakers List
+        // Available Caretakers List - Improved with cards and margins
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: _getAvailableCaretakersStream(),
@@ -539,7 +680,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
 
               final docs = snapshot.data?.docs ?? [];
 
-              // Filter by search - REMOVED THE isConnected FILTER
               final filteredDocs = docs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final username = (data['username'] as String?)?.toLowerCase() ?? '';
@@ -568,18 +708,20 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
                 },
                 color: Colors.blueAccent,
                 child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
                     final doc = filteredDocs[index];
                     final caretaker = doc.data() as Map<String, dynamic>;
                     final caretakerUid = doc.id;
                     final isNurse = caretaker['caregiverType'] == 'nurse';
-                    final isCaretakerConnected = caretaker['isConnected'] == true;
 
                     return Card(
                       elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
                         onTap: () async {
                           if (mounted) {
                             await Navigator.push(
@@ -598,44 +740,23 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
                           children: [
                             CircleAvatar(
                               backgroundColor: Colors.grey[300],
-                              backgroundImage: NetworkImage(
-                                caretaker['profileImageUrl'] ?? '',
-                              ),
-                              child: const Icon(Icons.person, color: Colors.blueAccent),
+                              backgroundImage: (caretaker['profileImageUrl'] != null &&
+                                      caretaker['profileImageUrl'].toString().isNotEmpty)
+                                  ? NetworkImage(caretaker['profileImageUrl'])
+                                  : null,
+                              child: (caretaker['profileImageUrl'] == null ||
+                                      caretaker['profileImageUrl'].toString().isEmpty)
+                                  ? const Icon(Icons.person, color: Colors.blueAccent)
+                                  : null,
                             ),
                             if (isNurse) _buildNurseBadge(),
-                            if (isCaretakerConnected)
-                              Positioned(
-                                bottom: 0,
-                                left: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.link,
-                                    size: 12,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                         title: Text('${caretaker['fullName'] ?? 'Unnamed'} (@${caretaker['username'] ?? ''})'),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Experience: ${caretaker['experienceYears'] ?? 0} years | ${caretaker['city'] ?? ''}',
-                            ),
-                            if (isCaretakerConnected)
-                              const Text(
-                                'Currently connected to another user',
-                                style: TextStyle(color: Colors.red, fontSize: 12),
-                              ),
-                          ],
+                        subtitle: Text(
+                          isNurse
+                              ? 'Experience: ${caretaker['experienceYears'] ?? 0} years | ${caretaker['city'] ?? ''}'
+                              : 'Relation: ${caretaker['relation'] ?? 'Unknown'} | ${caretaker['city'] ?? ''}',
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -657,11 +778,10 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
                                 }
                               },
                             ),
-                            if (!isCaretakerConnected)
-                              IconButton(
-                                icon: const Icon(Icons.person_add, color: Colors.blue),
-                                onPressed: () => _sendRequest(caretakerUid),
-                              ),
+                            IconButton(
+                              icon: const Icon(Icons.person_add, color: Colors.blue),
+                              onPressed: () => _sendRequest(caretakerUid),
+                            ),
                           ],
                         ),
                       ),

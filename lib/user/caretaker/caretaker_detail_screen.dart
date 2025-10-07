@@ -1,5 +1,4 @@
 // lib/user/caretaker/caretaker_detail_screen.dart
-// lib/user/caretaker/caretaker_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -48,7 +47,7 @@ class CaretakerDetailScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blueAccent.withValues(alpha: 0.1), Colors.white],
+            colors: [Colors.blueAccent.withOpacity(0.1), Colors.white],
           ),
         ),
         child: SingleChildScrollView(
@@ -62,10 +61,14 @@ class CaretakerDetailScreen extends StatelessWidget {
                     CircleAvatar(
                       radius: 60,
                       backgroundColor: Colors.grey[300],
-                      backgroundImage: NetworkImage(
-                        caretakerData['profileImageUrl'] ?? '',
-                      ),
-                      child: const Icon(Icons.person, size: 60, color: Colors.blueAccent),
+                      backgroundImage: (caretakerData['profileImageUrl'] != null &&
+                              caretakerData['profileImageUrl'].toString().isNotEmpty)
+                          ? NetworkImage(caretakerData['profileImageUrl'])
+                          : null,
+                      child: (caretakerData['profileImageUrl'] == null ||
+                              caretakerData['profileImageUrl'].toString().isEmpty)
+                          ? const Icon(Icons.person, size: 60, color: Colors.blueAccent)
+                          : null,
                     ),
                     if (isNurse) _buildNurseBadge(),
                   ],
@@ -77,7 +80,8 @@ class CaretakerDetailScreen extends StatelessWidget {
                   children: [
                     Text(
                       caretakerData['fullName'] ?? 'Unnamed',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
                     ),
                     Text(
                       '@${caretakerData['username'] ?? ''}',
@@ -95,17 +99,22 @@ class CaretakerDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildInfoRow(Icons.info_outline, 'Bio', caretakerData['bio'] ?? ''),
-                      _buildInfoRow(Icons.location_city, 'City', caretakerData['city'] ?? ''),
-                      _buildInfoRow(Icons.phone, 'Phone', caretakerData['phoneNo'] ?? ''),
+                      _buildInfoRow(context, Icons.info_outline, 'Bio', caretakerData['bio'] ?? ''),
+                      _buildInfoRow(context, Icons.location_city, 'City', caretakerData['city'] ?? ''),
+                      _buildInfoRow(context, Icons.phone, 'Phone', caretakerData['phoneNo'] ?? ''),
                       if (isNurse) ...[
-                        _buildInfoRow(Icons.work_history, 'Experience Years', '${caretakerData['experienceYears'] ?? 0} years'),
-                        _buildInfoRow(Icons.description, 'Experience Bio', caretakerData['experienceBio'] ?? ''),
-                        _buildInfoRow(Icons.school, 'Nursing Qualification', caretakerData['graduationOnNursing'] ?? ''),
+                        _buildInfoRow(context, Icons.work_history, 'Experience Years',
+                            '${caretakerData['experienceYears'] ?? 0} years'),
+                        _buildInfoRow(context, Icons.description, 'Experience Bio',
+                            caretakerData['experienceBio'] ?? ''),
+                        _buildInfoRow(context, Icons.school, 'Nursing Qualification',
+                            caretakerData['graduationOnNursing'] ?? ''),
                         if (caretakerData['graduationCertificateUrl']?.isNotEmpty ?? false)
-                          _buildInfoRow(Icons.picture_as_pdf, 'Certificate', 'View Certificate'),
+                          _buildInfoRow(
+                              context, Icons.picture_as_pdf, 'Certificate', 'View Certificate'),
                       ] else
-                        _buildInfoRow(Icons.family_restroom, 'Relation', caretakerData['relation'] ?? ''),
+                        _buildInfoRow(
+                            context, Icons.family_restroom, 'Relation', caretakerData['relation'] ?? ''),
                     ],
                   ),
                 ),
@@ -119,8 +128,7 @@ class CaretakerDetailScreen extends StatelessWidget {
                         final phone = caretakerData['phoneNo'];
                         if (phone != null && phone.isNotEmpty) {
                           final url = Uri.parse('tel:$phone');
-                          final can = await canLaunchUrl(url);
-                          if (can) {
+                          if (await canLaunchUrl(url)) {
                             await launchUrl(url);
                           } else if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +160,8 @@ class CaretakerDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  /// ✅ FIXED: Added BuildContext as a parameter so `ScaffoldMessenger.of(context)` works
+  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -164,7 +173,28 @@ class CaretakerDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(value),
+                if (label == 'Certificate')
+                  GestureDetector(
+                    onTap: () async {
+                      final url = Uri.parse(caretakerData['graduationCertificateUrl']);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not open certificate')),
+                        );
+                      }
+                    },
+                    child: Text(
+                      value,
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  )
+                else
+                  Text(value),
               ],
             ),
           ),

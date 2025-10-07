@@ -18,7 +18,7 @@ class UserBottomNav extends StatefulWidget {
 }
 
 class _UserBottomNavState extends State<UserBottomNav> {
-  int _selectedIndex = 2; // Start with Home (center)
+  int _selectedIndex = 2;
   final PatientLocationService _locationService = PatientLocationService();
   StreamSubscription<DocumentSnapshot>? _connectionSubscription;
   bool _isConnected = false;
@@ -137,32 +137,41 @@ class _UserBottomNavState extends State<UserBottomNav> {
   Widget _buildAnimatedIcon(IconData icon, int index, String label) {
     final bool isSelected = _selectedIndex == index;
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AnimatedScale(
-          scale: isSelected ? 1.25 : 1.0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          child: Icon(
-            icon,
-            color: isSelected ? Colors.blueAccent : Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 3),
-        AnimatedOpacity(
-          opacity: isSelected ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 200),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: Colors.blueAccent,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(top: isSelected ? 2 : 8, bottom: isSelected ? 0 : 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedScale(
+            scale: isSelected ? 1.2 : 1.1,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutBack,
+            child: Icon(
+              icon,
+              color: isSelected ? Colors.blueAccent : Colors.grey[600],
             ),
           ),
-        ),
-      ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            child: isSelected
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blueAccent,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 

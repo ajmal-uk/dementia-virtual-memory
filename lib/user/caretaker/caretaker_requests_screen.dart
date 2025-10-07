@@ -1,5 +1,4 @@
 // lib/user/caretaker/caretaker_requests_screen.dart
-// lib/user/caretaker/caretaker_requests_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -35,20 +34,32 @@ class _CaretakerRequestsScreenState extends State<CaretakerRequestsScreen> {
     }
 
     try {
+      // NOTE: Ensure a composite index is created in Firestore for the 'connections' collection
+      // on fields: user_uid (Ascending), status (Ascending)
+      // If index error occurs, create it via the link in the error log.
+      // To avoid index on orderBy, we fetch without orderBy and sort in code.
       final connectionsQuery = await _firestore
           .collection('connections')
           .where('user_uid', isEqualTo: uid)
           .where('status', isEqualTo: 'pending')
-          .orderBy('timestamp', descending: true)
           .get();
 
-      final pendingUids = connectionsQuery.docs.map((doc) => doc.data()['caretaker_uid']).toList().toSet().toList();
+      // Sort in code: descending by timestamp
+      final sortedDocs = connectionsQuery.docs.toList()
+        ..sort((a, b) {
+          final aTimestamp = a.data()['timestamp'] as Timestamp? ?? Timestamp(0, 0);
+          final bTimestamp = b.data()['timestamp'] as Timestamp? ?? Timestamp(0, 0);
+          return bTimestamp.compareTo(aTimestamp);
+        });
+
+      final pendingUids = sortedDocs.map((doc) => doc.data()['caretaker_uid'] as String?).whereType<String>().toSet().toList();
 
       if (pendingUids.isEmpty) {
         setState(() => _isLoading = false);
         return;
       }
 
+      // Fetch caretakers
       final query = await _firestore
           .collection('caretaker')
           .where('uid', whereIn: pendingUids)
@@ -60,6 +71,11 @@ class _CaretakerRequestsScreenState extends State<CaretakerRequestsScreen> {
       });
     } catch (e) {
       logger.e('Error loading pending requests: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading requests: $e')),
+        );
+      }
       setState(() => _isLoading = false);
     }
   }
@@ -76,32 +92,47 @@ class _CaretakerRequestsScreenState extends State<CaretakerRequestsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _pendingRequests.isEmpty
               ? const Center(child: Text('No pending requests'))
-              : ListView.builder(
-                  itemCount: _pendingRequests.length,
-                  itemBuilder: (context, index) {
-                    final caretaker = _pendingRequests[index].data() as Map<String, dynamic>;
-                    final caretakerUid = _pendingRequests[index].id;
-                    return ListTile(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CaretakerDetailScreen(
-                              caretakerUid: caretakerUid,
-                              caretakerData: caretaker,
-                              onConnect: () {}, // No connect for pending
-                            ),
+              : RefreshIndicator(
+                  onRefresh: _loadPendingRequests,
+                  child: ListView.builder(
+                    itemCount: _pendingRequests.length,
+                    itemBuilder: (context, index) {
+                      final caretaker = _pendingRequests[index].data() as Map<String, dynamic>;
+                      final caretakerUid = _pendingRequests[index].id;
+                      return Card(
+                        elevation: 2,
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CaretakerDetailScreen(
+                                  caretakerUid: caretakerUid,
+                                  caretakerData: caretaker,
+                                  onConnect: () {}, // No connect for pending
+                                ),
+                              ),
+                            );
+                          },
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.grey[300],
+                            backgroundImage: (caretaker['profileImageUrl'] != null &&
+                                    caretaker['profileImageUrl'].toString().isNotEmpty)
+                                ? NetworkImage(caretaker['profileImageUrl'])
+                                : null,
+                            child: (caretaker['profileImageUrl'] == null ||
+                                    caretaker['profileImageUrl'].toString().isEmpty)
+                                ? const Icon(Icons.person, color: Colors.blueAccent)
+                                : null,
                           ),
-                        );
-                      },
-                      leading: CircleAvatar(
-                        backgroundImage: NetworkImage(caretaker['profileImageUrl'] ?? ''),
-                        child: const Icon(Icons.person),
-                      ),
-                      title: Text(caretaker['fullName'] ?? ''),
-                      subtitle: Text('@${caretaker['username'] ?? ''} - Pending'),
-                    );
-                  },
+                          title: Text(caretaker['fullName'] ?? ''),
+                          subtitle: Text('@${caretaker['username'] ?? ''} - Pending'),
+                        ),
+                      );
+                    },
+                  ),
                 ),
     );
   }
