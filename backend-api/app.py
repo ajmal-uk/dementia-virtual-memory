@@ -1,4 +1,3 @@
-# Updated API code
 import os
 import tempfile
 import base64
@@ -131,21 +130,19 @@ def home():
 
 @app.route('/recognize', methods=['POST'])
 def recognize():
-    members_str = request.form.get("members")
-    image_url = request.form.get("imageUrl")
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
 
-    if not members_str:
+    members = data.get("members")
+    image_url = data.get("imageUrl")
+
+    if not members:
         return jsonify({"error": "members field is required"}), 400
     if not image_url:
         return jsonify({"error": "imageUrl field is required"}), 400
-
-    import json
-    try:
-        members = json.loads(members_str)
-        if not isinstance(members, list):
-            raise ValueError("members must be a list")
-    except Exception as e:
-        return jsonify({"error": f"Invalid members JSON: {e}"}), 400
+    if not isinstance(members, list):
+        return jsonify({"error": "members must be a list"}), 400
 
     sfr = SimpleFacerec()
 

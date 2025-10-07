@@ -199,16 +199,17 @@ class _ScannerScreenState extends State<ScannerScreen>
 
       final response = await http.post(
         Uri.parse('$apiUrl/recognize'),
-        body: {
-          'members': jsonEncode(widget.members
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'members': widget.members
               .map((m) => {
                     'memberName': m['name'],
                     'memberRelation': m['relation'],
                     'memberImage': m['imageUrl'],
                   })
-              .toList()),
+              .toList(),
           'imageUrl': 'data:image/jpeg;base64,$base64Image',
-        },
+        }),
       );
 
       if (response.statusCode == 200) {
