@@ -45,12 +45,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _stateController = TextEditingController(text: widget.userData['state']);
     _dob = widget.userData['dob']?.toDate();
     
-    // Handle gender case conversion
     final genderFromData = widget.userData['gender'];
     if (genderFromData is String) {
       _gender = genderFromData.toLowerCase();
     } else {
-      _gender = 'male'; // default
+      _gender = 'male'; 
     }
     
     _profileImageUrl = widget.userData['profileImageUrl'] ?? '';
@@ -274,7 +273,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _gender, // Now this will match exactly with lowercase values
+                value: _gender,
                 hint: const Text('Select Gender'),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

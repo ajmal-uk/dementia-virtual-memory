@@ -913,7 +913,6 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 16),
 
-        // Conditional Input Fields
         if (_caregiverType == CaregiverType.relative) ...[
           _buildTextField(
             relationController,
@@ -1006,7 +1005,6 @@ class _RegisterPageState extends State<RegisterPage> {
         _buildReviewItem('City', cityController.text),
         _buildReviewItem('State', stateController.text),
 
-        // Caretaker Specific Review
         if (widget.role == 'caretaker') ...[
           _buildReviewSectionTitle('Caretaker Details'),
           _buildReviewItem(
@@ -1070,7 +1068,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.blueAccent.withValues(alpha : 0.1),
+            color: Colors.blueAccent.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: Colors.blueAccent, size: 24),
@@ -1199,7 +1197,6 @@ class _RegisterPageState extends State<RegisterPage> {
               child: _buildProgressIndicator(),
             ),
 
-            // Form Content
             Expanded(
               child: Container(
                 margin: const EdgeInsets.all(16),
@@ -1235,7 +1232,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ),
 
-            // Navigation Buttons
             Container(
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
@@ -1250,7 +1246,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               child: Row(
                 children: [
-                  // Back Button
                   if (_currentSection != FormSection.personal)
                     Expanded(
                       child: OutlinedButton(
@@ -1279,9 +1274,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                   if (_currentSection != FormSection.personal)
-                    const SizedBox(width: 16),
-
-                  // Next/Submit Button
+                  const SizedBox(width: 16),
                   Expanded(
                     child: _loading
                         ? Container(

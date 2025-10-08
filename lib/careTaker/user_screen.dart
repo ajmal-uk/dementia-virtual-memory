@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../utils/notification_helper.dart';
 import 'caretaker_map_screen.dart';
 import 'family_scanner.dart';
 
@@ -13,7 +14,7 @@ class UserScreen extends StatefulWidget {
   State<UserScreen> createState() => _UserScreenState();
 }
 
-class _UserScreenState extends State<UserScreen> {
+class _UserScreenState extends State<UserScreen> with SingleTickerProviderStateMixin {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -23,11 +24,24 @@ class _UserScreenState extends State<UserScreen> {
   bool _isConnected = false;
   bool _isLoading = true;
 
-  String _selectedTab = 'Today';
+  String _selectedSubTab = 'Tasks'; // Top nav: Tasks, Members, Profile
+  TabController? _tabController;
+
+  String _selectedTaskTab = 'Today'; // Sub-tabs for Tasks
+
+  // For task addition
+  final TextEditingController _taskController = TextEditingController();
+  final TextEditingController _descController = TextEditingController();
+  DateTime? _dueDate;
+  DateTime? _reminderTime;
+
+  // Patient's family members
+  List<Map<String, dynamic>> _patientMembers = [];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _checkConnectionStatus();
   }
 
@@ -59,6 +73,7 @@ class _UserScreenState extends State<UserScreen> {
                 _patientUid = patientUid;
                 _patientName = patientDoc.data()?['fullName'] ?? 'Unknown Patient';
                 _patientImageUrl = patientDoc.data()?['profileImageUrl'] ?? '';
+                _patientMembers = List<Map<String, dynamic>>.from(patientDoc.data()?['members'] ?? []);
                 _isConnected = true;
                 _isLoading = false;
               });
@@ -89,7 +104,6 @@ class _UserScreenState extends State<UserScreen> {
     }
   }
 
-
   Stream<QuerySnapshot<Map<String, dynamic>>> _getTasksStream() {
     if (_patientUid == null) return Stream.empty();
 
@@ -103,19 +117,19 @@ class _UserScreenState extends State<UserScreen> {
 
     final recurringColl = _firestore.collection('user').doc(_patientUid).collection('recurring_tasks');
 
-    if (_selectedTab == 'Recurring') {
+    if (_selectedTaskTab == 'Recurring') {
       return recurringColl.orderBy('createdAt', descending: true).snapshots();
-    } else if (_selectedTab == 'Today') {
+    } else if (_selectedTaskTab == 'Today') {
       return coll
           .where('dueDate', isGreaterThanOrEqualTo: todayStart)
           .where('dueDate', isLessThan: todayEnd)
           .orderBy('dueDate', descending: false)
           .snapshots();
-    } else if (_selectedTab == 'Upcoming') {
+    } else if (_selectedTaskTab == 'Upcoming') {
       return coll.where('dueDate', isGreaterThanOrEqualTo: todayEnd).orderBy('dueDate', descending: false).snapshots();
-    } else if (_selectedTab == 'Completed') {
+    } else if (_selectedTaskTab == 'Completed') {
       return coll.where('completed', isEqualTo: true).snapshots();
-    } else if (_selectedTab == 'All') {
+    } else if (_selectedTaskTab == 'All') {
       return coll.orderBy('dueDate', descending: true).snapshots();
     } else {
       return Stream.empty();
@@ -154,7 +168,7 @@ class _UserScreenState extends State<UserScreen> {
 
   Widget _buildTaskCard(DocumentSnapshot doc) {
     final task = doc.data() as Map<String, dynamic>;
-    final isTemplate = _selectedTab == 'Recurring';
+    final isTemplate = _selectedTaskTab == 'Recurring';
 
     final completed = isTemplate ? false : (task['completed'] as bool? ?? false);
     final title = task['task'] as String? ?? 'Untitled Task';
@@ -208,12 +222,12 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  Widget _filterChip(String label) {
+  Widget _buildFilterChip(String label) {
     return ChoiceChip(
       label: Text(label),
-      selected: _selectedTab == label,
+      selected: _selectedTaskTab == label,
       onSelected: (sel) {
-        if (sel) setState(() => _selectedTab = label);
+        if (sel) setState(() => _selectedTaskTab = label);
       },
     );
   }
@@ -262,6 +276,251 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
+  Future<void> _addTask() async {
+    if (_patientUid == null) return;
+
+    final newTask = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Task'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _taskController,
+                decoration: InputDecoration(
+                  labelText: 'Task Name',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _descController,
+                decoration: InputDecoration(
+                  labelText: 'Description (optional)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.calendar_today),
+                label: Text(_dueDate == null ? 'Set Due Date' : DateFormat('MMM dd, hh:mm a').format(_dueDate!)),
+                onPressed: () async {
+                  final pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2100),
+                  );
+                  if (pickedDate != null) {
+                    final pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (pickedTime != null && mounted) {
+                      setState(() {
+                        _dueDate = DateTime(
+                          pickedDate.year,
+                          pickedDate.month,
+                          pickedDate.day,
+                          pickedTime.hour,
+                          pickedTime.minute,
+                        );
+                      });
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.alarm),
+                label: Text(_reminderTime == null ? 'Set Reminder (Optional)' : DateFormat('MMM dd, hh:mm a').format(_reminderTime!)),
+                onPressed: () async {
+                  final pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2100),
+                  );
+                  if (pickedDate != null) {
+                    final pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (pickedTime != null && mounted) {
+                      setState(() {
+                        _reminderTime = DateTime(
+                          pickedDate.year,
+                          pickedDate.month,
+                          pickedDate.day,
+                          pickedTime.hour,
+                          pickedTime.minute,
+                        );
+                      });
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () {
+            if (_taskController.text.isEmpty || _dueDate == null) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task name and due date required')));
+              return;
+            }
+            Navigator.pop(context, {
+              'task': _taskController.text,
+              'description': _descController.text,
+              'dueDate': _dueDate,
+              'reminderTime': _reminderTime,
+            });
+            _taskController.clear();
+            _descController.clear();
+            _dueDate = null;
+            _reminderTime = null;
+          }, child: const Text('Add')),
+        ],
+      ),
+    );
+
+    if (newTask != null) {
+      try {
+        await _firestore.collection('user').doc(_patientUid).collection('to_dos').add({
+          'task': newTask['task'],
+          'description': newTask['description'],
+          'completed': false,
+          'createdAt': Timestamp.now(),
+          'dueDate': Timestamp.fromDate(newTask['dueDate']),
+          'reminderTime': newTask['reminderTime'] != null ? Timestamp.fromDate(newTask['reminderTime']) : null,
+          'createdBy': 'caretaker',
+        });
+
+        if (newTask['reminderTime'] != null) {
+          final patientDoc = await _firestore.collection('user').doc(_patientUid).get();
+          final patientPlayerIds = List<String>.from(patientDoc.data()?['playerIds'] ?? []);
+          await sendNotification(patientPlayerIds, 'New task added by caretaker: ${newTask['task']}');
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task added successfully')));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding task: $e')));
+      }
+    }
+  }
+
+  Widget _buildPatientProfile() {
+    return FutureBuilder<DocumentSnapshot>(
+      future: _firestore.collection('user').doc(_patientUid).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+          return const Center(child: Text('Error loading profile'));
+        }
+
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: CircleAvatar(
+                  radius: 60,
+                  backgroundImage: NetworkImage(data['profileImageUrl'] ?? ''),
+                  child: data['profileImageUrl'] == null ? const Icon(Icons.person, size: 60) : null,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  data['fullName'] ?? 'Unknown',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  '@${data['username'] ?? ''}',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text('Personal Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              _buildInfoRow('Email', data['email'] ?? ''),
+              _buildInfoRow('Phone', data['phoneNo'] ?? ''),
+              _buildInfoRow('Gender', data['gender'] ?? ''),
+              _buildInfoRow('DOB', data['dob'] != null ? DateFormat('MMM dd, yyyy').format(data['dob'].toDate()) : ''),
+              _buildInfoRow('Bio', data['bio'] ?? ''),
+              const SizedBox(height: 16),
+              const Text('Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              _buildInfoRow('Locality', data['locality'] ?? ''),
+              _buildInfoRow('City', data['city'] ?? ''),
+              _buildInfoRow('State', data['state'] ?? ''),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 1,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(value.isEmpty ? 'N/A' : value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMembersSection() {
+    if (_patientMembers.isEmpty) {
+      return const Center(child: Text('No family members added'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _patientMembers.length,
+      itemBuilder: (context, index) {
+        final member = _patientMembers[index];
+        return Card(
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundImage: NetworkImage(member['imageUrl'] ?? ''),
+            ),
+            title: Text(member['name'] ?? ''),
+            subtitle: Text(member['relation'] ?? ''),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -289,7 +548,15 @@ class _UserScreenState extends State<UserScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-
+                if (_selectedSubTab == 'Tasks')
+                  FloatingActionButton.extended(
+                    heroTag: 'add_task_btn',
+                    onPressed: _addTask,
+                    label: const Text('Add Task', style: TextStyle(color: Colors.white)),
+                    icon: const Icon(Icons.add_task, color: Colors.white),
+                    backgroundColor: Colors.orange,
+                  ),
+                const SizedBox(height: 12),
                 FloatingActionButton.extended(
                   heroTag: 'face_scan_btn',
                   onPressed: _openFaceScanner,
@@ -321,53 +588,85 @@ class _UserScreenState extends State<UserScreen> {
         children: [
           _buildPatientDetails(),
           const Divider(),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                _filterChip('Today'),
-                const SizedBox(width: 8),
-                _filterChip('Upcoming'),
-                const SizedBox(width: 8),
-                _filterChip('Completed'),
-                const SizedBox(width: 8),
-                _filterChip('All'),
-                const SizedBox(width: 8),
-                _filterChip('Recurring'),
-              ],
-            ),
+          TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Tasks'),
+              Tab(text: 'Members'),
+              Tab(text: 'Profile'),
+            ],
+            labelColor: Colors.indigo,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.indigo,
           ),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _getTasksStream(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-                if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text('No $_selectedTab tasks found.'));
-                }
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                Column(
+                  children: [
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          _buildFilterChip('Today'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('Upcoming'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('Completed'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('All'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('Recurring'),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: _getTasksStream(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+                          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                          if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
+                            return Center(child: Text('No $_selectedTaskTab tasks found.'));
+                          }
 
-                var docs = snapshot.data!.docs;
-                if (_selectedTab == 'Completed') {
-                  docs.sort((a, b) {
-                    final aData = a.data() as Map<String, dynamic>;
-                    final bData = b.data() as Map<String, dynamic>;
-                    final aDate = (aData['dueDate'] as Timestamp?)?.toDate() ?? DateTime(0);
-                    final bDate = (bData['dueDate'] as Timestamp?)?.toDate() ?? DateTime(0);
-                    return bDate.compareTo(aDate);
-                  });
-                }
+                          var docs = snapshot.data!.docs;
+                          if (_selectedTaskTab == 'Completed') {
+                            docs.sort((a, b) {
+                              final aData = a.data() as Map<String, dynamic>;
+                              final bData = b.data() as Map<String, dynamic>;
+                              final aDate = (aData['dueDate'] as Timestamp?)?.toDate() ?? DateTime(0);
+                              final bDate = (bData['dueDate'] as Timestamp?)?.toDate() ?? DateTime(0);
+                              return bDate.compareTo(aDate);
+                            });
+                          }
 
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) => _buildTaskCard(docs[index]),
-                );
-              },
+                          return ListView.builder(
+                            itemCount: docs.length,
+                            itemBuilder: (context, index) => _buildTaskCard(docs[index]),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                _buildMembersSection(),
+                _buildPatientProfile(),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    _taskController.dispose();
+    _descController.dispose();
+    super.dispose();
   }
 }

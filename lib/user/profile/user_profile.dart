@@ -40,7 +40,7 @@ class _UserProfileState extends State<UserProfile> {
     try {
       final uid = _auth.currentUser?.uid;
       if (uid != null) {
-        // Load user data
+        
         final doc = await _firestore.collection('user').doc(uid).get();
         if (doc.exists && mounted) {
           setState(() {
@@ -50,7 +50,7 @@ class _UserProfileState extends State<UserProfile> {
           throw Exception('User document not found');
         }
 
-        // Load albums
+        
         final albumSnap = await _firestore
             .collection('user')
             .doc(uid)
@@ -63,7 +63,7 @@ class _UserProfileState extends State<UserProfile> {
           });
         }
 
-        // Load today's tasks counts
+        
         final today = DateTime.now();
         final todayStart = Timestamp.fromDate(
           DateTime(today.year, today.month, today.day),
@@ -130,9 +130,9 @@ class _UserProfileState extends State<UserProfile> {
             fontSize: 20,
           ),
         ),
-        backgroundColor: Colors.blue, // ✅ Changed from white to blue
+  backgroundColor: Colors.blue,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white), // ✅ Makes back icon white
+  iconTheme: const IconThemeData(color: Colors.white),
       ),
 
       body: _isLoading
@@ -155,7 +155,7 @@ class _UserProfileState extends State<UserProfile> {
                         children: [
                           const SizedBox(height: 16),
 
-                          /// Header with avatar + stats
+                          
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -279,7 +279,7 @@ class _UserProfileState extends State<UserProfile> {
 
                           const SizedBox(height: 20),
 
-                          /// Buttons
+                          
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
@@ -301,8 +301,8 @@ class _UserProfileState extends State<UserProfile> {
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue, // ✅ Button background color
-                                      foregroundColor: Colors.white, // ✅ Text color
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -323,8 +323,8 @@ class _UserProfileState extends State<UserProfile> {
                                       );
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue, // ✅ Button background color
-                                      foregroundColor: Colors.white, // ✅ Text color
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),

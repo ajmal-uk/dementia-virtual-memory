@@ -36,7 +36,6 @@ class _EditScreenState extends State<EditScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize text controllers with existing member data
     _nameController.text = widget.memberData['name'] ?? '';
     _relationController.text = widget.memberData['relation'] ?? '';
     _phoneController.text = widget.memberData['phone'] ?? '';

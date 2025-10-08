@@ -1,12 +1,16 @@
 # DVMA - Dementia Virtual Memory App
 
 <div align="center">
-  <img src="assets/logo.png" alt="DVMA Logo" width="200"/>
+  <img src="https://via.placeholder.com/200x200?text=DVMA+Logo" alt="DVMA Logo" width="200"/>
+  <h3>Dementia Virtual Memory Assistant</h3>
+  <p>A comprehensive mobile app for dementia patients, caregivers, and admins</p>
 </div>
+
+---
 
 ## 📱 Project Overview
 
-**DVMA (Dementia Virtual Memory Assistant)** is a comprehensive mobile application designed to help dementia patients manage their daily tasks, preserve memories, and stay connected with caregivers and family members. The app features role-based access for **Users**, **Caretakers**, and **Admins**, with real-time notifications, AI-powered chat assistance, and face recognition capabilities.
+**DVMA (Dementia Virtual Memory Assistant)** is a compassionate mobile application designed to support dementia patients in managing their daily lives, preserving memories, and staying connected with caregivers and family. The app provides role-based access for **Users**, **Caretakers**, and **Admins**, featuring real-time notifications, AI-powered chat assistance, and face recognition capabilities to enhance the quality of life for dementia patients.
 
 ---
 
@@ -40,18 +44,16 @@
 
 ## 📸 Screenshots
 
-> 📌 **Note**: Add screenshots in the `assets/screenshots/` directory and update paths below.
-
-| Screen | Description |
-|--------|-------------|
-| `assets/screenshots/welcome.png` | Welcome screen with role selection |
-| `assets/screenshots/login.png` | Login screen for each role |
-| `assets/screenshots/user_home.png` | User home with task overview |
-| `assets/screenshots/ai_chat.png` | AI chat assistant interface |
-| `assets/screenshots/caretaker_dashboard.png` | Caretaker connected patient view |
-| `assets/screenshots/admin_dashboard.png` | Admin user management view |
-| `assets/screenshots/family_scanner.png` | Face recognition scanner |
-| `assets/screenshots/diary_album.png` | Diary and memory album |
+| Screen | Description | Screenshot |
+|--------|-------------|-------------|
+| Welcome | Welcome screen with role selection | <img src="https://via.placeholder.com/300x600?text=Welcome+Screen" width="150"> |
+| Login | Login screen for each role | <img src="https://via.placeholder.com/300x600?text=Login+Screen" width="150"> |
+| User Home | User home with task overview | <img src="https://via.placeholder.com/300x600?text=User+Home" width="150"> |
+| AI Chat | AI chat assistant interface | <img src="https://via.placeholder.com/300x600?text=AI+Chat" width="150"> |
+| Caretaker Dashboard | Caretaker connected patient view | <img src="https://via.placeholder.com/300x600?text=Caretaker+Dashboard" width="150"> |
+| Admin Dashboard | Admin user management view | <img src="https://via.placeholder.com/300x600?text=Admin+Dashboard" width="150"> |
+| Family Scanner | Face recognition scanner | <img src="https://via.placeholder.com/300x600?text=Family+Scanner" width="150"> |
+| Diary & Album | Diary and memory album | <img src="https://via.placeholder.com/300x600?text=Diary+Album" width="150"> |
 
 ---
 
@@ -82,20 +84,91 @@
 
 ## 📊 Firebase Collections (Database Schema)
 
-| Collection | Fields | Description |
-|------------|--------|-------------|
-| **user** | `uid`, `fullName`, `username`, `email`, `phoneNo`, `dob`, `gender`, `bio`, `locality`, `city`, `state`, `profileImageUrl`, `isConnected`, `currentConnectionId`, `emergencyContacts`, `playerIds`, `isBanned` | Patient profiles and settings |
-| **caretaker** | `uid`, `fullName`, `username`, `email`, `phoneNo`, `profileImageUrl`, `caregiverType` (`relative`/`nurse`), `relation`, `experienceYears`, `experienceBio`, `graduationOnNursing`, `graduationCertificateUrl`, `isApprove`, `isConnected`, `currentConnectionId`, `playerIds`, `isBanned` | Caretaker profiles and credentials |
-| **admin** | `uid`, `email`, `createdAt` | Admin accounts |
-| **connections** | `user_uid`, `caretaker_uid`, `status` (`pending`/`accepted`/`unbind_requested`/`unbound`), `timestamp`, `confirmedBy`, `requestedBy` | User-caretaker relationships |
-| **user/to_dos** | `task`, `description`, `completed`, `createdAt`, `dueDate`, `reminderTime`, `recurringId`, `createdBy` | Patient tasks |
-| **user/recurring_tasks** | `task`, `description`, `dailyDueTime`, `dailyReminderTime`, `createdAt` | Recurring task templates |
-| **user/family_members** | `name`, `relation`, `phone`, `imageUrl`, `createdAt` | Family member contacts |
-| **user/album** | `title`, `description`, `imageUrl`, `createdAt` | Memory photos |
-| **user/diary** | `content`, `createdAt`, `updatedAt` | Diary entries (doc ID = date) |
-| **reports** | `sender_uid`, `sender_role`, `reported_uid`, `reported_role`, `title`, `description`, `created_at`, `seen` | User reports |
-| **notifications** | `type`, `message`, `from`, `to`, `createdAt`, `isRead`, `connectionId` | Role-based notifications |
-| **api** | `apiURL`, `email` | System configuration |
+### Collection: `user`
+- **Description**: Stores patient profiles and settings.
+- **Fields**:
+  - `uid` (String): User ID
+  - `fullName` (String): Full name
+  - `username` (String): Unique username
+  - `email` (String): Email address
+  - `phoneNo` (String): Phone number
+  - `dob` (Timestamp): Date of birth
+  - `gender` (String): Gender (male/female/other)
+  - `bio` (String): Short bio
+  - `locality` (String): Locality
+  - `city` (String): City
+  - `state` (String): State
+  - `profileImageUrl` (String): Profile image URL
+  - `isConnected` (Boolean): Connection status
+  - `currentConnectionId` (String): Current connection ID
+  - `emergencyContacts` (Array): List of emergency contacts
+  - `playerIds` (Array): OneSignal player IDs
+  - `isBanned` (Boolean): Ban status
+- **Subcollections**:
+  - `to_dos`: Task documents (see below)
+  - `recurring_tasks`: Recurring task templates
+  - `family_members`: Family member documents
+  - `album`: Memory photo documents
+  - `diary`: Diary entries (document ID is date string)
+  - `notifications`: Notification documents
+
+### Collection: `caretaker`
+- **Description**: Stores caretaker profiles and credentials.
+- **Fields**:
+  - `uid` (String): Caretaker ID
+  - `fullName` (String): Full name
+  - `username` (String): Unique username
+  - `email` (String): Email address
+  - `phoneNo` (String): Phone number
+  - `profileImageUrl` (String): Profile image URL
+  - `caregiverType` (String): 'relative' or 'nurse'
+  - `relation` (String): Relation to patient (if relative)
+  - `experienceYears` (Number): Years of experience (if nurse)
+  - `experienceBio` (String): Experience bio (if nurse)
+  - `graduationOnNursing` (String): Nursing qualification (if nurse)
+  - `graduationCertificateUrl` (String): Certificate URL (if nurse)
+  - `isApprove` (Boolean): Approval status
+  - `isConnected` (Boolean): Connection status
+  - `currentConnectionId` (String): Current connection ID
+  - `playerIds` (Array): OneSignal player IDs
+  - `isBanned` (Boolean): Ban status
+- **Subcollections**:
+  - `notifications`: Notification documents
+
+### Collection: `admin`
+- **Description**: Admin accounts.
+- **Fields**:
+  - `uid` (String): Admin ID
+  - `email` (String): Email address
+  - `createdAt` (Timestamp): Account creation time
+
+### Collection: `connections`
+- **Description**: Manages user-caretaker relationships.
+- **Fields**:
+  - `user_uid` (String): User ID
+  - `caretaker_uid` (String): Caretaker ID
+  - `status` (String): 'pending', 'accepted', 'unbind_requested', 'unbound'
+  - `timestamp` (Timestamp): Connection request time
+  - `confirmedBy` (String): UID of who confirmed
+  - `requestedBy` (String): UID of who requested
+
+### Collection: `reports`
+- **Description**: User-generated reports.
+- **Fields**:
+  - `sender_uid` (String): Reporter's UID
+  - `sender_role` (String): Reporter's role
+  - `reported_uid` (String): Reported user's UID (if applicable)
+  - `reported_role` (String): Reported user's role (if applicable)
+  - `title` (String): Report title
+  - `description` (String): Report description
+  - `created_at` (Timestamp): Report time
+  - `seen` (Boolean): Admin seen status
+
+### Collection: `api`
+- **Description**: System configuration.
+- **Fields**:
+  - `apiURL` (String): Face recognition API URL
+  - `email` (String): Support email
 
 ---
 
@@ -222,13 +295,20 @@ dependencies:
 
 ### Python (requirements.txt)
 ```txt
-Flask==3.1.2
-deepface==0.0.95
-opencv-python==4.12.0.88
-pillow==11.3.0
-requests==2.32.5
-numpy==2.2.6
+Flask
+deepface
+opencv-python
+pillow
+requests
+numpy
+tf_keras
 ```
+
+### Python
+```txt
+pip install Flask deepface opencv-python pillow requests numpy tf_keras
+```
+
 
 ---
 
@@ -265,7 +345,6 @@ numpy==2.2.6
 5. Open a Pull Request
 
 ---
-
 
 ## 📞 Support
 

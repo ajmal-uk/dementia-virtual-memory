@@ -109,7 +109,6 @@ class _AIChatPageState extends State<AIChatPage> {
 
     final uid = currentUserId;
 
-    // Load user data
     final userDoc = await _firestore.collection('user').doc(uid).get();
     if (userDoc.exists && mounted) {
       setState(() {
@@ -117,7 +116,6 @@ class _AIChatPageState extends State<AIChatPage> {
       });
     }
 
-    // Load today's tasks
     final today = DateTime.now();
     final todayStart = Timestamp.fromDate(
       DateTime(today.year, today.month, today.day),
@@ -149,7 +147,6 @@ class _AIChatPageState extends State<AIChatPage> {
         _remainingTasks = incompleteTasks.length;
         _completedTasks = tasksSnap.docs.length - incompleteTasks.length;
 
-        // Build system prompt
         _systemPrompt = '''
 You are a compassionate AI assistant named "Dementia Helper" for a person with dementia.
 - Provide gentle reminders about tasks.
@@ -172,7 +169,6 @@ Summary:
 Always start conversations with a warm greeting and address the user by name if important. If the user mentions tasks, reference the summary above. Encourage completion of remaining tasks gently. If asked about past events, suggest checking the diary. Never overwhelm with too much information.
 ''';
 
-        // Initial AI greeting
         if (_chatHistory.isEmpty) {
           _addMessageToHistory({
             'role': 'model',

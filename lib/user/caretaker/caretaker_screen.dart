@@ -1,4 +1,3 @@
-// lib/user/caretaker/caretaker_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -31,16 +30,12 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
     _searchController.addListener(() => setState(() => _search = _searchController.text.toLowerCase()));
   }
 
-  // REAL-TIME STREAMS
-
-  // Stream for user's connection status
   Stream<DocumentSnapshot> _getUserStream() {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return Stream.empty();
     return _firestore.collection('user').doc(uid).snapshots();
   }
 
-  // Stream for available caretakers
   Stream<QuerySnapshot> _getAvailableCaretakersStream() {
     return _firestore
         .collection('caretaker')
@@ -49,7 +44,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
         .snapshots();
   }
 
-  // Stream for connection details (if connected)
   Stream<DocumentSnapshot?> _getConnectionStream(String? connectionId) {
     if (connectionId == null) return Stream.value(null);
     return _firestore.collection('connections').doc(connectionId).snapshots();
@@ -60,14 +54,11 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
     return _firestore.collection('caretaker').doc(caretakerUid).snapshots();
   }
 
-  // ACTIONS
-
   Future<void> _sendRequest(String caretakerUid) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
     try {
-      // Check if there's already a pending request
       final existingRequests = await _firestore
           .collection('connections')
           .where('user_uid', isEqualTo: uid)
@@ -84,7 +75,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
         return;
       }
 
-      // Check if caretaker is already connected to someone else
       final caretakerDoc = await _firestore.collection('caretaker').doc(caretakerUid).get();
       final isCaretakerConnected = caretakerDoc.data()?['isConnected'] == true;
 
@@ -106,13 +96,11 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
         'requestedBy': uid,
       });
 
-      // Notify caretaker
       final playerIds = List<String>.from(
         caretakerDoc.data()?['playerIds'] ?? [],
       );
       await sendNotification(playerIds, 'New connection request from user');
 
-      // Add to notifications subcollection with connectionId
       await _firestore
           .collection('caretaker')
           .doc(caretakerUid)
@@ -150,7 +138,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
             'requestedBy': _auth.currentUser?.uid,
           });
 
-      // Notify caretaker
       final caretakerDoc = await _firestore
           .collection('caretaker')
           .doc(caretakerUid)
@@ -341,7 +328,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
           return const Center(child: Text('Error: Invalid connection'));
         }
 
-        // Handle different connection statuses
         if (status == 'unbind_requested') {
           final isRequestedByMe = requestedBy == _auth.currentUser?.uid;
           if (isRequestedByMe) {
@@ -350,14 +336,12 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
             return _buildUnbindRequestedState(caretakerUid, connectionId);
           }
         } else if (status == 'unbound') {
-          // Auto-refresh to available caretakers
           WidgetsBinding.instance.addPostFrameCallback((_) {
             setState(() {});
           });
           return const Center(child: Text('Connection unbound'));
         }
 
-        // Normal connected state
         return StreamBuilder<DocumentSnapshot?>(
           stream: _getConnectedCaretakerStream(caretakerUid),
           builder: (context, caretakerSnapshot) {
@@ -384,7 +368,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header with avatar - Improved with shadow and better padding
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -432,7 +415,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
             ),
           ),
 
-          // Details Card - Improved elevation and padding
+
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Card(
@@ -460,7 +443,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
             ),
           ),
 
-          // Actions - Improved button styles
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Column(
@@ -639,7 +621,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
   Widget _buildAvailableCaretakers() {
     return Column(
       children: [
-        // Search Field - Improved with clear button
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: TextField(
@@ -665,7 +646,6 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
           ),
         ),
 
-        // Available Caretakers List - Improved with cards and margins
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: _getAvailableCaretakersStream(),

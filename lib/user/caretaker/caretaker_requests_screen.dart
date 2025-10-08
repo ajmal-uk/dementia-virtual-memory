@@ -1,4 +1,3 @@
-// lib/user/caretaker/caretaker_requests_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -34,17 +33,12 @@ class _CaretakerRequestsScreenState extends State<CaretakerRequestsScreen> {
     }
 
     try {
-      // NOTE: Ensure a composite index is created in Firestore for the 'connections' collection
-      // on fields: user_uid (Ascending), status (Ascending)
-      // If index error occurs, create it via the link in the error log.
-      // To avoid index on orderBy, we fetch without orderBy and sort in code.
       final connectionsQuery = await _firestore
           .collection('connections')
           .where('user_uid', isEqualTo: uid)
           .where('status', isEqualTo: 'pending')
           .get();
 
-      // Sort in code: descending by timestamp
       final sortedDocs = connectionsQuery.docs.toList()
         ..sort((a, b) {
           final aTimestamp = a.data()['timestamp'] as Timestamp? ?? Timestamp(0, 0);
@@ -59,7 +53,6 @@ class _CaretakerRequestsScreenState extends State<CaretakerRequestsScreen> {
         return;
       }
 
-      // Fetch caretakers
       final query = await _firestore
           .collection('caretaker')
           .where('uid', whereIn: pendingUids)
@@ -111,7 +104,7 @@ class _CaretakerRequestsScreenState extends State<CaretakerRequestsScreen> {
                                 builder: (context) => CaretakerDetailScreen(
                                   caretakerUid: caretakerUid,
                                   caretakerData: caretaker,
-                                  onConnect: () {}, // No connect for pending
+                                  onConnect: () {}, 
                                 ),
                               ),
                             );

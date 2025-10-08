@@ -174,12 +174,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final todayEnd = Timestamp.fromDate(DateTime.now().add(const Duration(days: 1)));
 
     try {
-      // Workaround: Simplified query to avoid composite index requirement
       final snap = await coll
           .where('dueDate', isGreaterThanOrEqualTo: todayStart)
           .where('dueDate', isLessThan: todayEnd)
           .get();
-      // Filter completed tasks in code
       final incompleteTasks = snap.docs
           .where((doc) => doc.data()['completed'] == false)
           .length;
@@ -643,7 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (context) => const AIChatPage()),
               );
             },
-            backgroundColor: Colors.blue, // Blue background
+            backgroundColor: Colors.blue,
             heroTag: 'ai_chat',
             child: ClipOval(
               child: Image.asset(

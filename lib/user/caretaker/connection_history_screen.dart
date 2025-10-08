@@ -1,4 +1,3 @@
-// lib/user/caretaker/connection_history_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -32,18 +31,12 @@ class _ConnectionHistoryScreenState extends State<ConnectionHistoryScreen> {
     }
 
     try {
-      // NOTE: Ensure a composite index is created in Firestore for the 'connections' collection
-      // on fields: user_uid (Ascending), status (Ascending)
-      // If index error occurs, create it via the link in the error log.
-      // To avoid index on orderBy, we fetch without orderBy and sort in code.
-      // Adjusted statuses: removed 'expired' as it's not used in the app
       final query = await _firestore
           .collection('connections')
           .where('user_uid', isEqualTo: uid)
           .where('status', whereIn: ['unbound', 'rejected'])
           .get();
 
-      // Sort in code: descending by timestamp
       final sortedDocs = query.docs.toList()
         ..sort((a, b) {
           final aTimestamp = a.data()['timestamp'] as Timestamp? ?? Timestamp(0, 0);

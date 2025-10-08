@@ -209,14 +209,14 @@ class _FamilyScreenState extends State<FamilyScreen> {
                                           IconButton(
                                             icon: const Icon(Icons.edit, color: Colors.blue),
                                             onPressed: () async {
-                                              final editContext = context; // Capture context
+                                              final editContext = context;
                                               try {
                                                 await Navigator.push(
                                                   editContext,
                                                   MaterialPageRoute(
                                                     builder: (context) => EditScreen(
-                                                      memberId: doc.id, // Pass the document ID
-                                                      memberData: doc.data() as Map<String, dynamic>, // Pass the member data
+                                                      memberId: doc.id,
+                                                      memberData: doc.data() as Map<String, dynamic>,
                                                     ),
                                                   ),
                                                 );
@@ -233,7 +233,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                                           IconButton(
                                             icon: const Icon(Icons.delete, color: Colors.red),
                                             onPressed: () async {
-                                              final deleteContext = context; // Capture context
+                                              final deleteContext = context;
                                               final confirm = await showDialog<bool>(
                                                 context: deleteContext,
                                                 builder: (context) => AlertDialog(
@@ -288,7 +288,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                               ),
                             ),
                     ),
-                    // Move buttons inside StreamBuilder to access snapshot
+                    
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
@@ -303,7 +303,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                                   label: const Text('Add Member',
                                       style: TextStyle(color: Colors.white)),
                                   onPressed: () async {
-                                    final addContext = context; // Capture context
+                                    final addContext = context;
                                     setState(() => _isAdding = true);
                                     try {
                                       await Navigator.push(
@@ -334,7 +334,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                                   label:
                                       const Text('Scan', style: TextStyle(color: Colors.white)),
                                   onPressed: () async {
-                                    final scanContext = context; // Capture context
+                                    final scanContext = context;
                                     setState(() => _isScanning = true);
                                     try {
                                       final result = await Navigator.push(

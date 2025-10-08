@@ -58,7 +58,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
         if (!mounted) return;
 
         setState(() {
-          _diaries = snap.docs.reversed.toList(); // oldest first
+          _diaries = snap.docs.reversed.toList();
           _currentDate = DateTime.now();
           final todayStr = DateFormat('yyyy-MM-dd').format(_currentDate);
           _hasToday = _diaries.any((doc) => doc.id == todayStr);
@@ -111,7 +111,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
       await docRef.set({
         'content': content,
         'updatedAt': Timestamp.now(),
-        if (!doc.exists) 'createdAt': Timestamp.now(), // only for new docs
+        if (!doc.exists) 'createdAt': Timestamp.now(),
       }, SetOptions(merge: true));
     } catch (e) {
       if (mounted) {

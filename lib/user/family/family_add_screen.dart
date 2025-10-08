@@ -132,13 +132,13 @@ class _AddScreenState extends State<AddScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
       if (mounted){
-        Navigator.pop(context); // Close loading dialog
+        Navigator.pop(context);  
         Navigator.pop(context); 
-      }// Return to family screen
+      }
     } catch (e) {
       logger.e('Error saving member: $e');
       if (mounted) {
-        Navigator.pop(context); // Close loading dialog
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error saving: $e')),
         );

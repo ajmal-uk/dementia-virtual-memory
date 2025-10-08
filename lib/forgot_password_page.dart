@@ -46,7 +46,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             colors: [Colors.blueAccent.withValues(alpha: 0.1), Colors.white],
           ),
         ),
-        child: SingleChildScrollView( // Add SingleChildScrollView to handle keyboard overflow
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
