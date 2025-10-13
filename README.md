@@ -1,7 +1,7 @@
 # DVMA - Dementia Virtual Memory App
 
 <div align="center">
-  <img src="https://via.placeholder.com/200x200?text=DVMA+Logo" alt="DVMA Logo" width="200"/>
+  <img src="./assets/aiIcon.png" alt="DVMA Logo" width="200"/>
   <h3>Dementia Virtual Memory Assistant</h3>
   <p>A comprehensive mobile app for dementia patients, caregivers, and admins</p>
 </div>
