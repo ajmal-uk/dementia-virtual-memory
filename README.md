@@ -1,37 +1,48 @@
-# DVMA - Dementia Virtual Memory App
+# DVMA - Dementia Virtual Memory Assistant
 
 <div align="center">
-  <img src="./assets/aiIcon.png" alt="DVMA Logo" width="200"/>
+  <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/logo.png" alt="DVMA Logo" width="200"/>
   <h3>Dementia Virtual Memory Assistant</h3>
-  <p>A comprehensive mobile app for dementia patients, caregivers, and admins</p>
+  <p><strong>A comprehensive mobile app for dementia patients, caregivers, and admins</strong></p>
+  <p>Built with ❤️ using Flutter, Firebase, and AI</p>
+  <div>
+    <a href="#-features">Features</a> •
+    <a href="#-screenshots">Screenshots</a> •
+    <a href="#-database-schema">Database</a> •
+    <a href="#-api-documentation">API</a> •
+    <a href="#-getting-started">Getting Started</a> •
+    <a href="#-demo">Demo</a>
+  </div>
 </div>
 
 ---
 
-## 📱 Project Overview
+## 📖 About
 
 **DVMA (Dementia Virtual Memory Assistant)** is a compassionate mobile application designed to support dementia patients in managing their daily lives, preserving memories, and staying connected with caregivers and family. The app provides role-based access for **Users**, **Caretakers**, and **Admins**, featuring real-time notifications, AI-powered chat assistance, and face recognition capabilities to enhance the quality of life for dementia patients.
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
-### 👤 User Features
+### 👤 Patient Features
 - 📅 **Task Management**: Create, edit, and track daily/recurring tasks with reminders
 - 🤖 **AI Chat Assistant**: Gemini-powered chat for memory support and task reminders
 - 📸 **Memory Album**: Capture and organize photos with descriptions
 - 👨‍👩‍👧‍👦 **Family Management**: Add and manage family members with emergency contacts
 - 📍 **Location Sharing**: Share location with connected caretakers
-- 📔 **Diary**: Personal diary with auto-save and character limit
-- 🔔 **Notifications**: Receive alerts for tasks, connections, and unbind requests
+- 📔 **Personal Diary**: Secure diary with auto-save and character limit
+- 🔔 **Smart Notifications**: Receive alerts for tasks, connections, and unbind requests
+- 🎭 **Face Recognition**: Identify family members using AI
 
 ### 🧑‍⚕️ Caretaker Features
 - 🔗 **Connection Management**: Connect with users, accept/decline requests
 - 👤 **Patient Monitoring**: View patient tasks, location, and album
 - 📞 **Direct Communication**: Call and message connected users
-- 📸 **Face Recognition**: Identify family members via camera
+- 📸 **Advanced Scanner**: Identify family members via camera
 - 📋 **Task Oversight**: Monitor and manage patient tasks
-- 📊 **Reports**: Send reports about patients or app issues
+- 📊 **Reporting System**: Send reports about patients or app issues
+- 📍 **Live Tracking**: Real-time patient location tracking
 
 ### 👨‍💼 Admin Features
 - 👥 **User Management**: View, edit, ban/unban users and caretakers
@@ -39,21 +50,224 @@
 - 📈 **Reports Dashboard**: Review and manage user-generated reports
 - ⚙️ **System Settings**: Configure API URLs and support emails
 - 👤 **Account Control**: Admin account management and access control
+- 📊 **Analytics**: Monitor app usage and engagement
 
 ---
 
 ## 📸 Screenshots
 
-| Screen | Description | Screenshot |
-|--------|-------------|-------------|
-| Welcome | Welcome screen with role selection | <img src="https://via.placeholder.com/300x600?text=Welcome+Screen" width="150"> |
-| Login | Login screen for each role | <img src="https://via.placeholder.com/300x600?text=Login+Screen" width="150"> |
-| User Home | User home with task overview | <img src="https://via.placeholder.com/300x600?text=User+Home" width="150"> |
-| AI Chat | AI chat assistant interface | <img src="https://via.placeholder.com/300x600?text=AI+Chat" width="150"> |
-| Caretaker Dashboard | Caretaker connected patient view | <img src="https://via.placeholder.com/300x600?text=Caretaker+Dashboard" width="150"> |
-| Admin Dashboard | Admin user management view | <img src="https://via.placeholder.com/300x600?text=Admin+Dashboard" width="150"> |
-| Family Scanner | Face recognition scanner | <img src="https://via.placeholder.com/300x600?text=Family+Scanner" width="150"> |
-| Diary & Album | Diary and memory album | <img src="https://via.placeholder.com/300x600?text=Diary+Album" width="150"> |
+### Patient Interface
+| Screen | Description |
+|--------|-------------|
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-home-page.jpg" width="200"/> | Home page with task overview and quick actions |
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-ai-page.jpg" width="200"/> | AI Chat assistant for memory support |
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-caretaker-page.jpg" width="200"/> | Caretaker connection management |
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-profile-page.jpg" width="200"/> | Patient profile with emergency contacts |
+
+### Caretaker Interface
+| Screen | Description |
+|--------|-------------|
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-user-page.jpg" width="200"/> | Patient dashboard with task overview |
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-user-location-page.jpg" width="200"/> | Real-time patient location tracking |
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-profile-page.jpg" width="200"/> | Caretaker profile and settings |
+
+### Admin Interface
+| Screen | Description |
+|--------|-------------|
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-caretakers-page.jpg" width="200"/> | Caretaker management dashboard |
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-notification-sent-page.jpg" width="200"/> | Global notification system |
+| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-settings.jpg" width="200"/> | System configuration panel |
+
+---
+
+## 🗄 Database Schema
+
+### 📊 Collections Overview
+
+| Collection | Purpose | Key Features |
+|------------|---------|---------------|
+| `user` | Patient profiles and data | Tasks, diary, family, location |
+| `caretaker` | Caretaker profiles | Credentials, connections, approvals |
+| `admin` | Admin accounts | System access control |
+| `connections` | User-caretaker links | Status tracking, requests |
+| `reports` | User reports | Issue tracking, moderation |
+| `api` | System configuration | URLs, support contacts |
+
+---
+
+### 👤 User Collection
+
+**Purpose**: Stores patient profiles and all related data
+
+```json
+{
+  "uid": "abc123def",
+  "fullName": "John Doe",
+  "username": "johndoe2024",
+  "email": "john@example.com",
+  "phoneNo": "+1234567890",
+  "dob": "1950-05-15",
+  "gender": "male",
+  "bio": "Loves gardening and music",
+  "locality": "Springfield",
+  "city": "Los Angeles",
+  "state": "California",
+  "profileImageUrl": "https://example.com/profile.jpg",
+  "isConnected": true,
+  "currentConnectionId": "conn789",
+  "emergencyContacts": [
+    {
+      "name": "Jane Doe",
+      "relation": "Spouse",
+      "number": "+1234567891"
+    }
+  ],
+  "playerIds": ["oneSignalId123"],
+  "isBanned": false
+}
+```
+
+#### Subcollections
+
+| Subcollection | Description | Example Document |
+|---------------|-------------|------------------|
+| `to_dos` | Patient tasks | `{ "task": "Take medicine", "completed": false, "dueDate": "2024-06-15T10:00:00Z" }` |
+| `recurring_tasks` | Task templates | `{ "task": "Morning walk", "dailyDueTime": {"hour": 8, "min": 0} }` |
+| `family_members` | Family contacts | `{ "name": "Mary Doe", "relation": "Daughter", "phone": "+1234567892" }` |
+| `album` | Memory photos | `{ "title": "Birthday 2024", "imageUrl": "https://example.com/photo.jpg" }` |
+| `diary` | Daily entries (doc ID = date) | `{ "content": "Had a good day today...", "createdAt": "2024-06-15T20:00:00Z" }` |
+| `notifications` | User notifications | `{ "type": "connection_request", "message": "New request", "isRead": false }` |
+
+---
+
+### 🧑‍⚕️ Caretaker Collection
+
+**Purpose**: Stores caretaker profiles and credentials
+
+```json
+{
+  "uid": "xyz789abc",
+  "fullName": "Sarah Smith",
+  "username": "sarahsmith",
+  "email": "sarah@example.com",
+  "phoneNo": "+0987654321",
+  "profileImageUrl": "https://example.com/caretaker.jpg",
+  "caregiverType": "nurse",
+  "relation": "",
+  "experienceYears": 5,
+  "experienceBio": "5 years of elderly care experience",
+  "graduationOnNursing": "BSN from UCLA",
+  "graduationCertificateUrl": "https://example.com/cert.pdf",
+  "isApprove": true,
+  "isConnected": true,
+  "currentConnectionId": "conn789",
+  "playerIds": ["oneSignalId456"],
+  "isBanned": false
+}
+```
+
+#### Subcollections
+
+| Subcollection | Description | Example Document |
+|---------------|-------------|------------------|
+| `notifications` | Caretaker notifications | `{ "type": "unbind_request", "message": "Patient wants to unbind", "isRead": false }` |
+
+---
+
+### 🔗 Connections Collection
+
+**Purpose**: Manages user-caretaker relationships and status
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| user_uid | String | Patient UID | "abc123def" |
+| caretaker_uid | String | Caretaker UID | "xyz789abc" |
+| status | String | Connection status | "accepted" |
+| timestamp | Timestamp | Request time | "2024-06-15T10:00:00Z" |
+| confirmedBy | String | Who confirmed | "xyz789abc" |
+| requestedBy | String | Who requested | "abc123def" |
+
+---
+
+### 📊 Reports Collection
+
+**Purpose**: User-generated reports for moderation
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| sender_uid | String | Reporter UID | "abc123def" |
+| sender_role | String | Reporter role | "user" |
+| reported_uid | String | Reported UID | "xyz789abc" |
+| reported_role | String | Reported role | "caretaker" |
+| title | String | Report title | "Inappropriate behavior" |
+| description | String | Report details | "Caretaker was rude during call..." |
+| created_at | Timestamp | Report time | "2024-06-15T14:30:00Z" |
+| seen | Boolean | Admin seen status | false |
+
+---
+
+### ⚙️ API Collection
+
+**Purpose**: System configuration
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| apiURL | String | Face recognition API | "https://api.dvma.app" |
+| email | String | Support email | "support@dvma.app" |
+
+---
+
+## 🔌 API Documentation
+
+### Face Recognition Endpoint
+**URL**: `/recognize`  
+**Method**: `POST`
+
+#### Request Body
+```json
+{
+  "members": [
+    {
+      "memberName": "Jane Doe",
+      "memberRelation": "Daughter",
+      "memberImage": "base64_or_url",
+      "memberImageUrl": "https://example.com/jane.jpg"
+    }
+  ],
+  "imageUrl": "base64_or_url"
+}
+```
+
+#### Response
+```json
+{
+  "matchFound": true,
+  "memberName": "Jane Doe",
+  "memberRelation": "Daughter",
+  "memberImageUrl": "https://example.com/jane.jpg",
+  "confidence": 0.95
+}
+```
+
+### Notification API
+**URL**: `https://onesignal.com/api/v1/notifications`  
+**Method**: `POST`
+
+#### Request Headers
+```
+Content-Type: application/json
+Authorization: Basic YOUR_API_KEY
+```
+
+#### Request Body
+```json
+{
+  "app_id": "YOUR_APP_ID",
+  "include_player_ids": ["playerId1", "playerId2"],
+  "contents": {"en": "Task reminder: Take medicine"},
+  "priority": 10
+}
+```
 
 ---
 
@@ -73,138 +287,16 @@
 - **Backend**: Flask 3.1.2
 - **Face Recognition**: DeepFace (ArcFace model)
 - **Image Processing**: Pillow, OpenCV
-- **Deployment**: Gunicorn (for production)
+- **Deployment**: Gunicorn
 
 ### 🗄 Database (Firebase Firestore)
-- **Collections**: Structured for roles (user, caretaker, admin)
+- **Collections**: Role-based structured data
 - **Real-time Updates**: Live sync across devices
-- **Security**: Firestore rules for role-based access
+- **Security**: Firestore rules for access control
 
 ---
 
-## 📊 Firebase Collections (Database Schema)
-
-### Collection: `user`
-- **Description**: Stores patient profiles and settings.
-- **Fields**:
-  - `uid` (String): User ID
-  - `fullName` (String): Full name
-  - `username` (String): Unique username
-  - `email` (String): Email address
-  - `phoneNo` (String): Phone number
-  - `dob` (Timestamp): Date of birth
-  - `gender` (String): Gender (male/female/other)
-  - `bio` (String): Short bio
-  - `locality` (String): Locality
-  - `city` (String): City
-  - `state` (String): State
-  - `profileImageUrl` (String): Profile image URL
-  - `isConnected` (Boolean): Connection status
-  - `currentConnectionId` (String): Current connection ID
-  - `emergencyContacts` (Array): List of emergency contacts
-  - `playerIds` (Array): OneSignal player IDs
-  - `isBanned` (Boolean): Ban status
-- **Subcollections**:
-  - `to_dos`: Task documents (see below)
-  - `recurring_tasks`: Recurring task templates
-  - `family_members`: Family member documents
-  - `album`: Memory photo documents
-  - `diary`: Diary entries (document ID is date string)
-  - `notifications`: Notification documents
-
-### Collection: `caretaker`
-- **Description**: Stores caretaker profiles and credentials.
-- **Fields**:
-  - `uid` (String): Caretaker ID
-  - `fullName` (String): Full name
-  - `username` (String): Unique username
-  - `email` (String): Email address
-  - `phoneNo` (String): Phone number
-  - `profileImageUrl` (String): Profile image URL
-  - `caregiverType` (String): 'relative' or 'nurse'
-  - `relation` (String): Relation to patient (if relative)
-  - `experienceYears` (Number): Years of experience (if nurse)
-  - `experienceBio` (String): Experience bio (if nurse)
-  - `graduationOnNursing` (String): Nursing qualification (if nurse)
-  - `graduationCertificateUrl` (String): Certificate URL (if nurse)
-  - `isApprove` (Boolean): Approval status
-  - `isConnected` (Boolean): Connection status
-  - `currentConnectionId` (String): Current connection ID
-  - `playerIds` (Array): OneSignal player IDs
-  - `isBanned` (Boolean): Ban status
-- **Subcollections**:
-  - `notifications`: Notification documents
-
-### Collection: `admin`
-- **Description**: Admin accounts.
-- **Fields**:
-  - `uid` (String): Admin ID
-  - `email` (String): Email address
-  - `createdAt` (Timestamp): Account creation time
-
-### Collection: `connections`
-- **Description**: Manages user-caretaker relationships.
-- **Fields**:
-  - `user_uid` (String): User ID
-  - `caretaker_uid` (String): Caretaker ID
-  - `status` (String): 'pending', 'accepted', 'unbind_requested', 'unbound'
-  - `timestamp` (Timestamp): Connection request time
-  - `confirmedBy` (String): UID of who confirmed
-  - `requestedBy` (String): UID of who requested
-
-### Collection: `reports`
-- **Description**: User-generated reports.
-- **Fields**:
-  - `sender_uid` (String): Reporter's UID
-  - `sender_role` (String): Reporter's role
-  - `reported_uid` (String): Reported user's UID (if applicable)
-  - `reported_role` (String): Reported user's role (if applicable)
-  - `title` (String): Report title
-  - `description` (String): Report description
-  - `created_at` (Timestamp): Report time
-  - `seen` (Boolean): Admin seen status
-
-### Collection: `api`
-- **Description**: System configuration.
-- **Fields**:
-  - `apiURL` (String): Face recognition API URL
-  - `email` (String): Support email
-
----
-
-## 🔌 API Documentation
-
-### Face Recognition Endpoint
-- **URL**: `/recognize`
-- **Method**: `POST`
-- **Body**:
-  ```json
-  {
-    "members": [
-      {
-        "memberName": "John Doe",
-        "memberRelation": "Son",
-        "memberImage": "base64_or_url",
-        "memberImageUrl": "http://example.com/photo.jpg"
-      }
-    ],
-    "imageUrl": "base64_or_url"
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "matchFound": true,
-    "memberName": "John Doe",
-    "memberRelation": "Son",
-    "memberImageUrl": "http://example.com/photo.jpg",
-    "confidence": 0.95
-  }
-  ```
-
----
-
-## 🚀 Setup Instructions
+## 🚀 Getting Started
 
 ### Prerequisites
 - **Flutter SDK**: [Install Flutter](https://docs.flutter.dev/get-started/install)
@@ -233,17 +325,10 @@ flutter run
 
 ### 3. Face Recognition API Setup
 ```bash
-# Navigate to API directory
 cd api
-
-# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Run API
 python app.py
 ```
 
@@ -262,53 +347,33 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 dependencies:
   flutter:
     sdk: flutter
-  image_picker: ^1.2.0
   firebase_core: ^4.0.0
-  flutter_animate: ^4.5.2
-  cupertino_icons: ^1.0.8
-  camera: ^0.11.2
-  http: ^1.5.0
   cloud_firestore: ^6.0.0
   firebase_auth: ^6.0.1
-  characters: ^1.4.0
-  material_color_utilities: ^0.11.1
-  meta: ^1.16.0
-  cloudinary_public: ^0.23.1
+  image_picker: ^1.2.0
+  camera: ^0.11.2
+  http: ^1.5.0
   onesignal_flutter: ^5.3.4
-  url_launcher: ^6.3.2
-  permission_handler: ^12.0.1
-  fluttertoast: ^9.0.0
-  intl: ^0.20.2
-  file_picker: ^10.3.3
-  logger: ^2.6.1
-  shared_preferences: ^2.5.3
-  flutter_gemini: ^3.0.0
-  flutter_dotenv: ^6.0.0
-  confetti: ^0.8.0
-  flutter_isolate: ^2.1.0
-  foundation: ^0.0.5
-  image: ^4.5.4
-  typed_data: ^1.4.0
   google_maps_flutter: ^2.13.1
   geolocator: ^14.0.2
+  flutter_gemini: ^3.0.0
+  flutter_animate: ^4.5.2
+  intl: ^0.20.2
+  shared_preferences: ^2.5.3
+  logger: ^2.6.1
+  confetti: ^0.8.0
 ```
 
 ### Python (requirements.txt)
 ```txt
-Flask
-deepface
-opencv-python
-pillow
-requests
-numpy
-tf_keras
+Flask==3.1.2
+deepface==0.0.79
+opencv-python==4.8.1.78
+Pillow==10.0.1
+requests==2.31.0
+numpy==1.24.3
+tf_keras==2.13.0
 ```
-
-### Python
-```txt
-pip install Flask deepface opencv-python pillow requests numpy tf_keras
-```
-
 
 ---
 
@@ -336,6 +401,42 @@ pip install Flask deepface opencv-python pillow requests numpy tf_keras
 
 ---
 
+## 🔧 Configuration
+
+### Firebase Security Rules
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /user/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /caretaker/{caretakerId} {
+      allow read, write: if request.auth != null && request.auth.uid == caretakerId;
+    }
+    match /admin/{adminId} {
+      allow read, write: if request.auth != null && request.auth.uid == adminId;
+    }
+  }
+}
+```
+
+---
+
+## 📱 Demo
+
+Experience the DVMA app firsthand by downloading our demo APK:
+
+<div align="center">
+  <a href="https://mega.nz/file/m94lALhJ#yFUFa0AdSg3tuhSrvESzdnJ0Vy5d1qnypS-JOApCUQs" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+    📥 Download Demo APK
+  </a>
+</div>
+
+> **Note**: The demo APK is for testing purposes only and may not contain all production features.
+
+---
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -348,10 +449,11 @@ pip install Flask deepface opencv-python pillow requests numpy tf_keras
 
 ## 📞 Support
 
-For support, email us at: [ajmaluk.me@gmail.com](mailto:ajmaluk.me@gmail.com)
+For support, email us at: **ajmaluk.me@gmail.com**
 
 ---
 
 <div align="center">
-  Made with ❤️ for the dementia community
+  <p>Made with ❤️ for the dementia community</p>
+  <p>© 2024 DVMA - Dementia Virtual Memory Assistant</p>
 </div>
