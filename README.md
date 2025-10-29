@@ -25,7 +25,7 @@
 
 ## ✨ Features
 
-### 👤 Patient Features
+### 👤 Patient Features :
 - 📅 **Task Management**: Create, edit, and track daily/recurring tasks with reminders
 - 🤖 **AI Chat Assistant**: Gemini-powered chat for memory support and task reminders
 - 📸 **Memory Album**: Capture and organize photos with descriptions
