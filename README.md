@@ -103,7 +103,7 @@
 {
   "uid": "abc123def",
   "fullName": "John Doe",
-  "username": "johndoe2024",
+  "username": "johndoe2025",
   "email": "john@example.com",
   "phoneNo": "+1234567890",
   "dob": "1950-05-15",
@@ -131,11 +131,11 @@
 
 | Subcollection | Description | Example Document |
 |---------------|-------------|------------------|
-| `to_dos` | Patient tasks | `{ "task": "Take medicine", "completed": false, "dueDate": "2024-06-15T10:00:00Z" }` |
+| `to_dos` | Patient tasks | `{ "task": "Take medicine", "completed": false, "dueDate": "2025-06-15T10:00:00Z" }` |
 | `recurring_tasks` | Task templates | `{ "task": "Morning walk", "dailyDueTime": {"hour": 8, "min": 0} }` |
 | `family_members` | Family contacts | `{ "name": "Mary Doe", "relation": "Daughter", "phone": "+1234567892" }` |
-| `album` | Memory photos | `{ "title": "Birthday 2024", "imageUrl": "https://example.com/photo.jpg" }` |
-| `diary` | Daily entries (doc ID = date) | `{ "content": "Had a good day today...", "createdAt": "2024-06-15T20:00:00Z" }` |
+| `album` | Memory photos | `{ "title": "Birthday 2025", "imageUrl": "https://example.com/photo.jpg" }` |
+| `diary` | Daily entries (doc ID = date) | `{ "content": "Had a good day today...", "createdAt": "2025-06-15T20:00:00Z" }` |
 | `notifications` | User notifications | `{ "type": "connection_request", "message": "New request", "isRead": false }` |
 
 ---
@@ -183,7 +183,7 @@
 | user_uid | String | Patient UID | "abc123def" |
 | caretaker_uid | String | Caretaker UID | "xyz789abc" |
 | status | String | Connection status | "accepted" |
-| timestamp | Timestamp | Request time | "2024-06-15T10:00:00Z" |
+| timestamp | Timestamp | Request time | "2025-06-15T10:00:00Z" |
 | confirmedBy | String | Who confirmed | "xyz789abc" |
 | requestedBy | String | Who requested | "abc123def" |
 
@@ -201,7 +201,7 @@
 | reported_role | String | Reported role | "caretaker" |
 | title | String | Report title | "Inappropriate behavior" |
 | description | String | Report details | "Caretaker was rude during call..." |
-| created_at | Timestamp | Report time | "2024-06-15T14:30:00Z" |
+| created_at | Timestamp | Report time | "2025-06-15T14:30:00Z" |
 | seen | Boolean | Admin seen status | false |
 
 ---
@@ -455,5 +455,5 @@ For support, email us at: **ajmaluk.me@gmail.com**
 
 <div align="center">
   <p>Made with ❤️ for the dementia community</p>
-  <p>© 2024 DVMA - Dementia Virtual Memory Assistant</p>
+  <p>© 2025 DVMA - Dementia Virtual Memory Assistant</p>
 </div>
