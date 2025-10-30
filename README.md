@@ -1,91 +1,103 @@
 # DVMA - Dementia Virtual Memory Assistant
-
 <div align="center">
-  <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/logo.png" alt="DVMA Logo" width="200"/>
-  <h3>Dementia Virtual Memory Assistant</h3>
-  <p><strong>A comprehensive mobile app for dementia patients, caregivers, and admins</strong></p>
-  <p>Built with ❤️ using Flutter, Firebase, and AI</p>
+  <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/logo.png" alt="DVMA Logo" width="200" />
+  <br><br>
+  <h2>Dementia Virtual Memory Assistant</h2>
+  <p><strong>A compassionate mobile app empowering dementia patients, caregivers, and admins</strong></p>
+  <p>Built with ❤️ using <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" /> <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase" /> and AI</p>
+  <br>
   <div>
-    <a href="#-features">Features</a> •
-    <a href="#-screenshots">Screenshots</a> •
-    <a href="#-database-schema">Database</a> •
-    <a href="#-api-documentation">API</a> •
-    <a href="#-getting-started">Getting Started</a> •
-    <a href="#-demo">Demo</a>
+    <a href="#features">Features</a> •
+    <a href="#screenshots">Screenshots</a> •
+    <a href="#database-schema">Database</a> •
+    <a href="#api-documentation">API</a> •
+    <a href="#getting-started">Getting Started</a> •
+    <a href="#demo">Demo</a>
   </div>
 </div>
 
 ---
 
 ## 📖 About
+**DVMA (Dementia Virtual Memory Assistant)** is an innovative mobile application crafted to support individuals with dementia in navigating daily life, cherishing memories, and fostering connections with loved ones and caregivers. With intuitive role-based access for **Patients**, **Caretakers**, and **Admins**, DVMA delivers real-time notifications, AI-driven chat support, and advanced face recognition to uplift the well-being of dementia patients and their support networks.
 
-**DVMA (Dementia Virtual Memory Assistant)** is a compassionate mobile application designed to support dementia patients in managing their daily lives, preserving memories, and staying connected with caregivers and family. The app provides role-based access for **Users**, **Caretakers**, and **Admins**, featuring real-time notifications, AI-powered chat assistance, and face recognition capabilities to enhance the quality of life for dementia patients.
+<div align="center">
+  <img src="https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif" alt="Heartwarming Animation" width="200" />
+  <p><em>Bringing smiles and memories to life ✨</em></p>
+</div>
 
 ---
 
 ## ✨ Features
-
-### 👤 Patient Features :
-- 📅 **Task Management**: Create, edit, and track daily/recurring tasks with reminders
-- 🤖 **AI Chat Assistant**: Gemini-powered chat for memory support and task reminders
-- 📸 **Memory Album**: Capture and organize photos with descriptions
-- 👨‍👩‍👧‍👦 **Family Management**: Add and manage family members with emergency contacts
-- 📍 **Location Sharing**: Share location with connected caretakers
-- 📔 **Personal Diary**: Secure diary with auto-save and character limit
-- 🔔 **Smart Notifications**: Receive alerts for tasks, connections, and unbind requests
-- 🎭 **Face Recognition**: Identify family members using AI
+### 👤 Patient Features
+- 📅 **Task Management**: Effortlessly create, edit, and track daily or recurring tasks with smart reminders
+- 🤖 **AI Chat Assistant**: Powered by Gemini for personalized memory prompts and gentle task nudges
+- 📸 **Memory Album**: Capture heartfelt photos and add descriptive notes to relive cherished moments
+- 👨‍👩‍👧‍👦 **Family Management**: Easily add family members and set emergency contacts for peace of mind
+- 📍 **Location Sharing**: Share your location securely with trusted caretakers
+- 📔 **Personal Diary**: A private space for daily reflections with auto-save and thoughtful character limits
+- 🔔 **Smart Notifications**: Stay informed with timely alerts for tasks, connections, and unbind requests
+- 🎭 **Face Recognition**: Instantly identify family members using cutting-edge AI
 
 ### 🧑‍⚕️ Caretaker Features
-- 🔗 **Connection Management**: Connect with users, accept/decline requests
-- 👤 **Patient Monitoring**: View patient tasks, location, and album
-- 📞 **Direct Communication**: Call and message connected users
-- 📸 **Advanced Scanner**: Identify family members via camera
-- 📋 **Task Oversight**: Monitor and manage patient tasks
-- 📊 **Reporting System**: Send reports about patients or app issues
-- 📍 **Live Tracking**: Real-time patient location tracking
+- 🔗 **Connection Management**: Seamlessly connect with patients and handle requests with ease
+- 👤 **Patient Monitoring**: Gain insights into tasks, location, and shared albums
+- 📞 **Direct Communication**: Make calls or send messages to connected patients
+- 📸 **Advanced Scanner**: Use your camera to recognize family members on the go
+- 📋 **Task Oversight**: Supervise and assist with patient tasks remotely
+- 📊 **Reporting System**: Submit detailed reports on patient well-being or app feedback
+- 📍 **Live Tracking**: Monitor patient location in real-time for added safety
 
 ### 👨‍💼 Admin Features
-- 👥 **User Management**: View, edit, ban/unban users and caretakers
-- 🔔 **Global Notifications**: Send broadcasts or individual notifications
-- 📈 **Reports Dashboard**: Review and manage user-generated reports
-- ⚙️ **System Settings**: Configure API URLs and support emails
-- 👤 **Account Control**: Admin account management and access control
-- 📊 **Analytics**: Monitor app usage and engagement
+- 👥 **User Management**: Oversee, edit, and manage bans/unbans for users and caretakers
+- 🔔 **Global Notifications**: Broadcast announcements or send targeted alerts
+- 📈 **Reports Dashboard**: Review and resolve user-submitted reports efficiently
+- ⚙️ **System Settings**: Customize API endpoints and support channels
+- 👤 **Account Control**: Securely manage admin accounts and permissions
+- 📊 **Analytics**: Track app engagement and usage patterns for continuous improvement
+
+<div align="center">
+  <img src="https://media.giphy.com/media/l0MYt5jP1piOQNF4k/giphy.gif" alt="Feature Highlight Animation" width="150" />
+  <p><em>Features that care as much as you do 💙</em></p>
+</div>
 
 ---
 
 ## 📸 Screenshots
+Explore the app's intuitive interfaces through these thumbnail previews. Click any image to view the full-size version in an overlay (or open in a new tab).
 
 ### Patient Interface
 | Screen | Description |
 |--------|-------------|
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-home-page.jpg" width="200"/> | Home page with task overview and quick actions |
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-ai-page.jpg" width="200"/> | AI Chat assistant for memory support |
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-caretaker-page.jpg" width="200"/> | Caretaker connection management |
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-profile-page.jpg" width="200"/> | Patient profile with emergency contacts |
+| [![Home Page](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-home-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-home-page.jpg) | Home page with task overview and quick actions |
+| [![AI Chat](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-ai-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-ai-page.jpg) | AI Chat assistant for memory support |
+| [![Caretaker Connections](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-caretaker-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-caretaker-page.jpg) | Caretaker connection management |
+| [![Profile](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-profile-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-profile-page.jpg) | Patient profile with emergency contacts |
 
 ### Caretaker Interface
 | Screen | Description |
 |--------|-------------|
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-user-page.jpg" width="200"/> | Patient dashboard with task overview |
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-user-location-page.jpg" width="200"/> | Real-time patient location tracking |
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-profile-page.jpg" width="200"/> | Caretaker profile and settings |
+| [![Patient Dashboard](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-user-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-user-page.jpg) | Patient dashboard with task overview |
+| [![Location Tracking](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-user-location-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-user-location-page.jpg) | Real-time patient location tracking |
+| [![Caretaker Profile](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-profile-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/caretaker-profile-page.jpg) | Caretaker profile and settings |
 
 ### Admin Interface
 | Screen | Description |
 |--------|-------------|
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-caretakers-page.jpg" width="200"/> | Caretaker management dashboard |
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-notification-sent-page.jpg" width="200"/> | Global notification system |
-| <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-settings.jpg" width="200"/> | System configuration panel |
+| [![Caretaker Management](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-caretakers-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-caretakers-page.jpg) | Caretaker management dashboard |
+| [![Notifications](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-notification-sent-page.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-notification-sent-page.jpg) | Global notification system |
+| [![Settings](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-settings.jpg)](https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/admin-settings.jpg) | System configuration panel |
+
+<div align="center">
+  <img src="https://media.giphy.com/media/26ufnwz3wDUll5GU0/giphy.gif" alt="Screenshot Scroll Animation" width="150" />
+</div>
 
 ---
 
 ## 🗄 Database Schema
-
 ### 📊 Collections Overview
-
 | Collection | Purpose | Key Features |
-|------------|---------|---------------|
+|------------|---------|--------------|
 | `user` | Patient profiles and data | Tasks, diary, family, location |
 | `caretaker` | Caretaker profiles | Credentials, connections, approvals |
 | `admin` | Admin accounts | System access control |
@@ -93,11 +105,8 @@
 | `reports` | User reports | Issue tracking, moderation |
 | `api` | System configuration | URLs, support contacts |
 
----
-
 ### 👤 User Collection
-
-**Purpose**: Stores patient profiles and all related data
+**Purpose**: Stores comprehensive patient profiles and related data.
 
 ```json
 {
@@ -128,7 +137,6 @@
 ```
 
 #### Subcollections
-
 | Subcollection | Description | Example Document |
 |---------------|-------------|------------------|
 | `to_dos` | Patient tasks | `{ "task": "Take medicine", "completed": false, "dueDate": "2025-06-15T10:00:00Z" }` |
@@ -138,11 +146,8 @@
 | `diary` | Daily entries (doc ID = date) | `{ "content": "Had a good day today...", "createdAt": "2025-06-15T20:00:00Z" }` |
 | `notifications` | User notifications | `{ "type": "connection_request", "message": "New request", "isRead": false }` |
 
----
-
 ### 🧑‍⚕️ Caretaker Collection
-
-**Purpose**: Stores caretaker profiles and credentials
+**Purpose**: Manages caretaker profiles and professional credentials.
 
 ```json
 {
@@ -167,60 +172,49 @@
 ```
 
 #### Subcollections
-
 | Subcollection | Description | Example Document |
 |---------------|-------------|------------------|
 | `notifications` | Caretaker notifications | `{ "type": "unbind_request", "message": "Patient wants to unbind", "isRead": false }` |
 
----
-
 ### 🔗 Connections Collection
-
-**Purpose**: Manages user-caretaker relationships and status
+**Purpose**: Tracks user-caretaker relationships and statuses.
 
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
-| user_uid | String | Patient UID | "abc123def" |
-| caretaker_uid | String | Caretaker UID | "xyz789abc" |
-| status | String | Connection status | "accepted" |
-| timestamp | Timestamp | Request time | "2025-06-15T10:00:00Z" |
-| confirmedBy | String | Who confirmed | "xyz789abc" |
-| requestedBy | String | Who requested | "abc123def" |
-
----
+| `user_uid` | String | Patient UID | "abc123def" |
+| `caretaker_uid` | String | Caretaker UID | "xyz789abc" |
+| `status` | String | Connection status | "accepted" |
+| `timestamp` | Timestamp | Request time | "2025-06-15T10:00:00Z" |
+| `confirmedBy` | String | Who confirmed | "xyz789abc" |
+| `requestedBy` | String | Who requested | "abc123def" |
 
 ### 📊 Reports Collection
-
-**Purpose**: User-generated reports for moderation
+**Purpose**: Handles user-submitted reports for admin review.
 
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
-| sender_uid | String | Reporter UID | "abc123def" |
-| sender_role | String | Reporter role | "user" |
-| reported_uid | String | Reported UID | "xyz789abc" |
-| reported_role | String | Reported role | "caretaker" |
-| title | String | Report title | "Inappropriate behavior" |
-| description | String | Report details | "Caretaker was rude during call..." |
-| created_at | Timestamp | Report time | "2025-06-15T14:30:00Z" |
-| seen | Boolean | Admin seen status | false |
-
----
+| `sender_uid` | String | Reporter UID | "abc123def" |
+| `sender_role` | String | Reporter role | "user" |
+| `reported_uid` | String | Reported UID | "xyz789abc" |
+| `reported_role` | String | Reported role | "caretaker" |
+| `title` | String | Report title | "Inappropriate behavior" |
+| `description` | String | Report details | "Caretaker was rude during call..." |
+| `created_at` | Timestamp | Report time | "2025-06-15T14:30:00Z" |
+| `seen` | Boolean | Admin seen status | false |
 
 ### ⚙️ API Collection
-
-**Purpose**: System configuration
+**Purpose**: Centralizes system-wide configurations.
 
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
-| apiURL | String | Face recognition API | "https://api.dvma.app" |
-| email | String | Support email | "support@dvma.app" |
+| `apiURL` | String | Face recognition API | "https://api.dvma.app" |
+| `email` | String | Support email | "support@dvma.app" |
 
 ---
 
 ## 🔌 API Documentation
-
 ### Face Recognition Endpoint
-**URL**: `/recognize`  
+**URL**: `/recognize`
 **Method**: `POST`
 
 #### Request Body
@@ -250,7 +244,7 @@
 ```
 
 ### Notification API
-**URL**: `https://onesignal.com/api/v1/notifications`  
+**URL**: `https://onesignal.com/api/v1/notifications`
 **Method**: `POST`
 
 #### Request Headers
@@ -272,41 +266,43 @@ Authorization: Basic YOUR_API_KEY
 ---
 
 ## 🛠 Tech Stack
-
 ### 📱 Mobile App (Flutter)
-- **Framework**: Flutter 3.9.2+
-- **State Management**: StatefulWidget + Streams
-- **Authentication**: Firebase Auth
-- **Database**: Cloud Firestore
-- **Storage**: Cloudinary (images)
-- **Notifications**: OneSignal
-- **Maps**: Google Maps Flutter
-- **AI**: Gemini API
+- Framework: Flutter 3.9.2+
+- State Management: StatefulWidget + Streams
+- Authentication: Firebase Auth
+- Database: Cloud Firestore
+- Storage: Cloudinary (images)
+- Notifications: OneSignal
+- Maps: Google Maps Flutter
+- AI: Gemini API
 
 ### 🧠 Face Recognition API (Flask)
-- **Backend**: Flask 3.1.2
-- **Face Recognition**: DeepFace (ArcFace model)
-- **Image Processing**: Pillow, OpenCV
-- **Deployment**: Gunicorn
+- Backend: Flask 3.1.2
+- Face Recognition: DeepFace (ArcFace model)
+- Image Processing: Pillow, OpenCV
+- Deployment: Gunicorn
 
 ### 🗄 Database (Firebase Firestore)
-- **Collections**: Role-based structured data
-- **Real-time Updates**: Live sync across devices
-- **Security**: Firestore rules for access control
+- Collections: Role-based structured data
+- Real-time Updates: Live sync across devices
+- Security: Firestore rules for granular access control
+
+<div align="center">
+  <img src="https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif" alt="Tech Stack Animation" width="150" />
+</div>
 
 ---
 
 ## 🚀 Getting Started
-
 ### Prerequisites
-- **Flutter SDK**: [Install Flutter](https://docs.flutter.dev/get-started/install)
-- **Firebase Project**: [Create Firebase Project](https://console.firebase.google.com/)
-- **Python 3.9+**: For Flask API
-- **Cloudinary Account**: For image storage
+- Flutter SDK: https://docs.flutter.dev/get-started/install
+- Firebase Project: https://console.firebase.google.com/
+- Python 3.9+: For Flask API
+- Cloudinary Account: For image storage
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/yourusername/dvma.git
+git clone [https://github.com/yourusername/dvma.git](https://github.com/yourusername/dvma.git)
 cd dvma
 ```
 
@@ -317,143 +313,4 @@ flutter pub get
 
 # Configure Firebase
 # - Add `google-services.json` (Android) and `GoogleService-Info.plist` (iOS)
-# - Update `lib/firebase_options.dart` with your config
-
-# Run app
-flutter run
-```
-
-### 3. Face Recognition API Setup
-```bash
-cd api
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
-```
-
-### 4. Environment Variables
-Create `.env` in Flutter root:
-```env
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-```
-
----
-
-## 📦 Dependencies
-
-### Flutter (pubspec.yaml)
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  firebase_core: ^4.0.0
-  cloud_firestore: ^6.0.0
-  firebase_auth: ^6.0.1
-  image_picker: ^1.2.0
-  camera: ^0.11.2
-  http: ^1.5.0
-  onesignal_flutter: ^5.3.4
-  google_maps_flutter: ^2.13.1
-  geolocator: ^14.0.2
-  flutter_gemini: ^3.0.0
-  flutter_animate: ^4.5.2
-  intl: ^0.20.2
-  shared_preferences: ^2.5.3
-  logger: ^2.6.1
-  confetti: ^0.8.0
-```
-
-### Python (requirements.txt)
-```txt
-Flask==3.1.2
-deepface==0.0.79
-opencv-python==4.8.1.78
-Pillow==10.0.1
-requests==2.31.0
-numpy==1.24.3
-tf_keras==2.13.0
-```
-
----
-
-## 🏃‍♂️ How to Run
-
-1. **Start Firebase Emulator** (optional for development):
-   ```bash
-   firebase emulators:start
-   ```
-
-2. **Run Face Recognition API**:
-   ```bash
-   cd api && python app.py
-   ```
-
-3. **Run Flutter App**:
-   ```bash
-   flutter run
-   ```
-
-4. **Build APK**:
-   ```bash
-   flutter build apk --release
-   ```
-
----
-
-## 🔧 Configuration
-
-### Firebase Security Rules
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /user/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /caretaker/{caretakerId} {
-      allow read, write: if request.auth != null && request.auth.uid == caretakerId;
-    }
-    match /admin/{adminId} {
-      allow read, write: if request.auth != null && request.auth.uid == adminId;
-    }
-  }
-}
-```
-
----
-
-## 📱 Demo
-
-Experience the DVMA app firsthand by downloading our demo APK:
-
-<div align="center">
-  <a href="https://mega.nz/file/m94lALhJ#yFUFa0AdSg3tuhSrvESzdnJ0Vy5d1qnypS-JOApCUQs" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-    📥 Download Demo APK
-  </a>
-</div>
-
-> **Note**: The demo APK is for testing purposes only and may not contain all production features.
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📞 Support
-
-For support, email us at: **ajmaluk.me@gmail.com**
-
----
-
-<div align="center">
-  <p>Made with ❤️ for the dementia community</p>
-  <p>© 2025 DVMA - Dementia Virtual Memory Assistant</p>
-</div>
+#
