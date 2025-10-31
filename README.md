@@ -1,17 +1,14 @@
 # DVMA - Dementia Virtual Memory Assistant
-
 <p align="center">
   <img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/logo.png" alt="DVMA Logo" width="200" />
 </p>
-
 <h2 align="center">Dementia Virtual Memory Assistant</h2>
 <p align="center"><strong>A compassionate mobile app empowering dementia patients, caregivers, and admins</strong></p>
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" />
   <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase" />
-  and AI
+  <img src="https://img.shields.io/badge/Gemini-AI-FF6B35?style=for-the-badge&logo=google&logoColor=white" alt="Gemini AI" />
 </p>
-
 <p align="center">
   <a href="#features">Features</a> •
   <a href="#screenshots">Screenshots</a> •
@@ -24,7 +21,6 @@
 ---
 
 ## 📖 About
-
 **DVMA (Dementia Virtual Memory Assistant)** is an innovative mobile application crafted to support individuals with dementia in navigating daily life, cherishing memories, and fostering connections with loved ones and caregivers. With intuitive role-based access for **Patients**, **Caretakers**, and **Admins**, DVMA delivers real-time notifications, AI-driven chat support, and advanced face recognition to uplift the well-being of dementia patients and their support networks.
 
 <p align="center">
@@ -34,7 +30,6 @@
 ---
 
 ## ✨ Features
-
 ### 👤 Patient Features
 - 📅 **Task Management**: Effortlessly create, edit, and track daily or recurring tasks with smart reminders
 - 🤖 **AI Chat Assistant**: Powered by Gemini for personalized memory prompts and gentle task nudges
@@ -61,26 +56,22 @@
 - ⚙️ **System Settings**: Customize API endpoints and support channels
 - 👤 **Account Control**: Securely manage admin accounts and permissions
 - 📊 **Analytics**: Track app engagement and usage patterns for continuous improvement
-
 ---
-
 ## 📸 Screenshots
-
 Explore the app's interfaces through compact thumbnails. Click to enlarge in an overlay. The overlay includes a persistent close button.
 
 <style>
 /***** Compact thumbnails + overlay *****/
-.dvma-thumbs { display:flex; flex-wrap:wrap; gap:10px; }
+.dvma-thumbs { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
 .dvma-thumbs a { display:inline-block; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; background:#fff; }
-.dvma-thumbs img { width:160px; height:340px; object-fit:cover; display:block; }
-
+.dvma-thumbs img { width:120px; height:255px; object-fit:cover; display:block; }
 /* Lightbox using :target (works on GitHub Markdown) */
 .lightbox { display:none; }
 .lightbox:target { display:block; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; }
 .lightbox .content { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); max-width:92vw; max-height:86vh; }
 .lightbox img { width:auto; height:auto; max-width:92vw; max-height:86vh; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.5); }
 .lightbox .close { position:fixed; top:16px; right:16px; width:40px; height:40px; line-height:40px; text-align:center; font-size:22px; font-weight:700; color:#111; background:#fff; border-radius:999px; text-decoration:none; box-shadow:0 2px 10px rgba(0,0,0,0.35); z-index:10000; }
-@media (max-width:600px){ .dvma-thumbs img{ width:135px; height:285px; } }
+@media (max-width:600px){ .dvma-thumbs img{ width:100px; height:212px; } .dvma-thumbs { gap:8px; } }
 </style>
 
 ### Patient Interface
@@ -90,7 +81,6 @@ Explore the app's interfaces through compact thumbnails. Click to enlarge in an 
   <a href="#lb-user-caretaker"><img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-caretaker-page.jpg" alt="Caretaker Connections" /></a>
   <a href="#lb-user-profile"><img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-profile-page.jpg" alt="Profile" /></a>
 </div>
-
 <div id="lb-user-home" class="lightbox">
   <a class="close" href="#screenshots" aria-label="Close">×</a>
   <div class="content"><img src="https://ik.imagekit.io/uthakkan/Dimentia-Memory-Assistant/user-home-page.jpg" alt="Home Page - full" /></div>
@@ -149,13 +139,11 @@ Explore the app's interfaces through compact thumbnails. Click to enlarge in an 
 ---
 
 ## 🗄 Database Schema
-
 The following models reflect the current Firestore structure used in the app. Names are normalized to singular collection names as used in code.
 
 ### 📊 Collections Overview
-
 | Collection | Purpose | Key Features |
-|---|---|---|
+|------------|---------|--------------|
 | `user` | Patient profiles and data | Tasks, diary, family, location, notifications |
 | `caretaker` | Caretaker profiles | Credentials, approvals, connections, notifications |
 | `admin` | Admin accounts | System access control |
@@ -164,9 +152,9 @@ The following models reflect the current Firestore structure used in the app. Na
 | `api` | System configuration | URLs, support contacts |
 
 ### 👤 User Collection
-Purpose: Stores patient profiles and related data.
+**Purpose**: Stores patient profiles and related data.
 
-Example document
+**Example document**:
 ```
 {
   "uid": "abc123def",
@@ -191,7 +179,7 @@ Example document
 }
 ```
 
-Subcollections
+**Subcollections**:
 - `to_dos` — Patient tasks. Example: `{ "task": "Take medicine", "completed": false, "dueDate": "2025-06-15T10:00:00Z" }`
 - `recurring_tasks` — Task templates. Example: `{ "task": "Morning walk", "dailyDueTime": {"hour": 8, "min": 0} }`
 - `family_members` — Family contacts including face data references. Example: `{ "name": "Mary Doe", "relation": "Daughter", "phone": "+1234567892", "imageUrl": "https://..." }`
@@ -200,9 +188,9 @@ Subcollections
 - `notifications` — User notifications. Example: `{ "type": "connection_request", "message": "New request", "isRead": false, "createdAt": "2025-06-15T10:00:00Z" }`
 
 ### 🧑‍⚕️ Caretaker Collection
-Purpose: Manages caretaker profiles and professional credentials.
+**Purpose**: Manages caretaker profiles and professional credentials.
 
-Example document
+**Example document**:
 ```
 {
   "uid": "xyz789abc",
@@ -225,14 +213,14 @@ Example document
 }
 ```
 
-Subcollections
+**Subcollections**:
 - `notifications` — Caretaker notifications. Example: `{ "type": "unbind_request", "message": "Patient wants to unbind", "isRead": false, "createdAt": "2025-06-15T12:00:00Z" }`
 
 ### 🔗 Connections Collection
-Purpose: Tracks user–caretaker relationships and statuses.
+**Purpose**: Tracks user–caretaker relationships and statuses.
 
 | Field | Type | Description | Example |
-|---|---|---|---|
+|-------|------|-------------|---------|
 | `user_uid` | String | Patient UID | `"abc123def"` |
 | `caretaker_uid` | String | Caretaker UID | `"xyz789abc"` |
 | `status` | String | Connection status | `"accepted"` |
@@ -241,12 +229,75 @@ Purpose: Tracks user–caretaker relationships and statuses.
 | `requestedBy` | String | Who requested | `"abc123def"` |
 
 ### 📊 Reports Collection
-Purpose: Handles user-submitted reports for admin review.
+**Purpose**: Handles user-submitted reports for admin review.
 
 | Field | Type | Description | Example |
-|---|---|---|---|
+|-------|------|-------------|---------|
 | `sender_uid` | String | Reporter UID | `"abc123def"` |
 | `sender_role` | String | Reporter role | `"user"` |
 | `reported_uid` | String | Reported UID | `"xyz789abc"` |
 | `reported_role` | String | Reported role | `"caretaker"` |
-| `title` | String | Report title | `"Inappropriate behavior
+| `title` | String | Report title | `"Inappropriate behavior during visit"` |
+| `description` | String | Report details | `"The caretaker was unresponsive to requests for assistance."` |
+| `status` | String | Review status | `"pending"` |
+| `createdAt` | Timestamp | Submission time | `"2025-06-15T14:00:00Z"` |
+
+### ⚙️ API Collection
+**Purpose**: Stores system-wide configuration for dynamic endpoints and support info.
+
+**Example document**:
+```
+{
+  "geminiApiUrl": "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+  "supportEmail": "support@dvma.app",
+  "supportPhone": "+1-800-DVMA-HELP",
+  "version": "1.0.0",
+  "lastUpdated": "2025-06-15T00:00:00Z"
+}
+```
+---
+## 🔌 API Documentation
+DVMA leverages Firebase for authentication and Firestore for data persistence, with Gemini AI for chat features. Key endpoints are dynamically loaded from the `api` collection.
+
+### Authentication
+- **Sign Up/Login**: Firebase Auth (`signInWithEmailAndPassword` / `createUserWithEmailAndPassword`)
+- **Role Assignment**: Post-signup, users select role (patient/caretaker/admin) and complete profile.
+
+### Core APIs (Firestore)
+- **User Tasks**: `user/{uid}/to_dos` (CRUD via Firebase SDK)
+- **Connections**: `connections` (add/update for requests/approvals)
+- **Notifications**: OneSignal integration for push alerts, stored in user subcollections.
+- **Face Recognition**: Client-side ML Kit or serverless Cloud Vision API calls.
+
+### AI Integration
+- **Chat Assistant**: POST to Gemini API with prompt: `"As a compassionate assistant for dementia patients, respond to: {user_input}"`
+
+For full API specs, refer to [Firebase Docs](https://firebase.google.com/docs) and [Gemini API](https://ai.google.dev/gemini-api/docs).
+
+---
+## 🚀 Getting Started
+### Prerequisites
+- Flutter SDK (v3.10+)
+- Firebase project setup
+- OneSignal account for notifications
+- Gemini API key
+
+### Installation
+1. Clone the repo: `git clone https://github.com/ajmal-uk/dementia-virtual-memory.git`
+2. Install dependencies: `flutter pub get`
+3. Configure Firebase: Add `google-services.json` (Android) / `GoogleService-Info.plist` (iOS)
+4. Set environment vars: Update `lib/config/app_config.dart` with API keys.
+5. Run: `flutter run`
+
+### Development
+- **Patient Flow**: Test task creation and AI chat in simulator.
+- **Caretaker**: Simulate connections via Firestore emulator.
+- **Admin**: Use elevated privileges for testing bans/notifications.
+
+Contribute via pull requests—focus on accessibility and privacy enhancements!
+
+---
+
+<div align="center">
+  <small>Made with ❤️ for dementia care | © 2025 DVMA Team</small>
+</div>
